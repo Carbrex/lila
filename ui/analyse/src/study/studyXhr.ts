@@ -1,4 +1,4 @@
-import { StudyChapterConfig, ReloadData } from './interfaces';
+import { StudyChapterConfig, ReloadData, ChapterPreview } from './interfaces';
 import * as xhr from 'common/xhr';
 
 export const reload = (baseUrl: string, id: string, chapterId?: string): Promise<ReloadData> => {
@@ -21,10 +21,14 @@ export const practiceComplete = (chapterId: string, nbMoves: number) =>
   });
 
 export const importPgn = (studyId: string, data: any) =>
-  xhr.text(`/study/${studyId}/import-pgn?sri=${lichess.sri}`, {
+  xhr.text(`/study/${studyId}/import-pgn?sri=${site.sri}`, {
     method: 'POST',
     body: xhr.form(data),
   });
 
-export const multiBoard = (studyId: string, page: number, playing: boolean) =>
+export const multiBoard = (
+  studyId: string,
+  page: number,
+  playing: boolean,
+): Promise<Paginator<ChapterPreview>> =>
   xhr.json(`/study/${studyId}/multi-board?page=${page}&playing=${playing}`);

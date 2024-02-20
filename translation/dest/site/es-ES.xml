@@ -5,6 +5,7 @@
   <string name="toInviteSomeoneToPlayGiveThisUrl">Para invitar a alguien a jugar, comparte este enlace</string>
   <string name="gameOver">Fin de la partida</string>
   <string name="waitingForOpponent">Esperando al oponente</string>
+  <string name="orLetYourOpponentScanQrCode">O deja que tu oponente escanee este código QR</string>
   <string name="waiting">Esperando</string>
   <string name="yourTurn">Tu turno</string>
   <string name="aiNameLevelAiLevel">%1$s nivel %2$s</string>
@@ -417,6 +418,7 @@
   <string name="blackCheckmatesInOneMove">Juegan negras y dan mate en una</string>
   <string name="retry">Reintentar</string>
   <string name="reconnecting">Reconectando</string>
+  <string name="noNetwork">Sin conexión</string>
   <plurals name="nbFriendsOnline">
     <item quantity="one">%s amigo conectado</item>
     <item quantity="other">%s amigos conectados</item>
@@ -703,6 +705,7 @@
   <string name="toggleVariationArrows">Activar/Desactivar flechas de variantes</string>
   <string name="cyclePreviousOrNextVariation">Alterna entre la variante siguiente y la anterior</string>
   <string name="toggleGlyphAnnotations">Activa o desactiva la anotación de figurines</string>
+  <string name="togglePositionAnnotations">Alternar anotaciones de posición</string>
   <string name="variationArrowsInfo">Las flechas de variantes te permiten navegar sin usar la lista de movimientos.</string>
   <string name="playSelectedMove">hacer movimiento seleccionado</string>
   <string name="newTournament">Nuevo torneo</string>
@@ -885,7 +888,7 @@
   <string name="searchOrStartNewDiscussion">Buscar o empezar una nueva conversación</string>
   <string name="edit">Editar</string>
   <string name="bullet" comment="Probably best left untranslated. Leave it as 'Bullet' unless your language has a better word for it.">Bala</string>
-  <string name="blitz" comment="Probably best left untranslated. Leave it as 'Blitz' unless your language has a better word for it.">Blitz</string>
+  <string name="blitz" comment="Probably best left untranslated. Leave it as 'Blitz' unless your language has a better word for it.">Relámpago</string>
   <string name="rapid">Rápida</string>
   <string name="classical">Clásica</string>
   <string name="ultraBulletDesc">Partidas increíblemente rápidas: menos de 30 segundos</string>

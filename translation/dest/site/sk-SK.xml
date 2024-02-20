@@ -5,6 +5,7 @@
   <string name="toInviteSomeoneToPlayGiveThisUrl">Zdieľaním tejto adresy môžete niekoho pozvať k partii</string>
   <string name="gameOver">Koniec partie</string>
   <string name="waitingForOpponent">Čaká sa na súpera</string>
+  <string name="orLetYourOpponentScanQrCode">Alebo nech Váš súper naskenuje tento QR kód</string>
   <string name="waiting">Čaká sa</string>
   <string name="yourTurn">Ste na ťahu</string>
   <string name="aiNameLevelAiLevel">%1$s úrovne %2$s</string>
@@ -475,6 +476,7 @@
   <string name="blackCheckmatesInOneMove">Čierny dá mat 1. ťahom</string>
   <string name="retry">Znova</string>
   <string name="reconnecting">Pripájanie</string>
+  <string name="noNetwork">Offline</string>
   <plurals name="nbFriendsOnline">
     <item quantity="one">%s priateľ online</item>
     <item quantity="few">%s priatelia online</item>
@@ -739,6 +741,7 @@
   <string name="yourPendingSimuls">Vaše čakajúce simultánky</string>
   <string name="createdSimuls">Novovytvorené simultánky</string>
   <string name="hostANewSimul">Vytvoriť novú simultánku</string>
+  <string name="signUpToHostOrJoinASimul">Prihláste sa k zorganizovaniu alebo zapojeniu sa do simultánky</string>
   <string name="noSimulFound">Simultánka nenájdená</string>
   <string name="noSimulExplanation">Táto simultánna exhibícia neexistuje.</string>
   <string name="returnToSimulHomepage">Späť na Simultánku</string>

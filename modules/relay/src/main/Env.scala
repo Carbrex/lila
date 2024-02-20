@@ -1,11 +1,14 @@
 package lila.relay
 
 import akka.actor.*
+import scala.util.matching.Regex
 import com.softwaremill.macwire.*
 import com.softwaremill.tagging.*
 import play.api.libs.ws.StandaloneWSClient
 
 import lila.common.config.*
+import lila.memo.SettingStore
+import lila.memo.SettingStore.Formable.given
 
 @Module
 final class Env(
@@ -21,14 +24,13 @@ final class Env(
     pgnDump: lila.game.PgnDump,
     gameProxy: lila.round.GameProxyRepo,
     cacheApi: lila.memo.CacheApi,
+    settingStore: SettingStore.Builder,
     irc: lila.irc.IrcApi,
-    baseUrl: BaseUrl
-)(using
-    ec: Executor,
-    system: ActorSystem,
-    scheduler: Scheduler,
-    materializer: akka.stream.Materializer
-):
+    baseUrl: BaseUrl,
+    notifyApi: lila.notify.NotifyApi,
+    picfitApi: lila.memo.PicfitApi,
+    picfitUrl: lila.memo.PicfitUrl
+)(using Executor, ActorSystem, akka.stream.Materializer)(using scheduler: Scheduler):
 
   lazy val roundForm = wire[RelayRoundForm]
 
@@ -40,9 +42,13 @@ final class Env(
 
   private lazy val tourRepo = RelayTourRepo(colls.tour)
 
-  private lazy val leaderboard = wire[RelayLeaderboardApi]
+  lazy val leaderboard = wire[RelayLeaderboardApi]
+
+  private lazy val notifier = wire[RelayNotifier]
 
   lazy val jsonView = wire[JsonView]
+
+  lazy val listing: RelayListing = wire[RelayListing]
 
   lazy val api: RelayApi = wire[RelayApi]
 
@@ -54,16 +60,41 @@ final class Env(
 
   lazy val pgnStream = wire[RelayPgnStream]
 
+  lazy val teamTable = wire[RelayTeamTable]
+
   private lazy val sync = wire[RelaySync]
 
   private lazy val formatApi = wire[RelayFormatApi]
 
   private lazy val delay = wire[RelayDelay]
 
+  import SettingStore.CredentialsOption.given
+  val proxyCredentials = settingStore[Option[Credentials]](
+    "relayProxyCredentials",
+    default = none,
+    text =
+      "Broadcast: proxy credentials to fetch from external sources. Leave empty to use no auth (?!). Format: username:password".some
+  ).taggedWith[ProxyCredentials]
+
+  import SettingStore.HostPortOption.given
+  val proxyHostPort = settingStore[Option[HostPort]](
+    "relayProxyHostPort",
+    default = none,
+    text =
+      "Broadcast: proxy host and port to fetch from external sources. Leave empty to use no proxy. Format: host:port".some
+  ).taggedWith[ProxyHostPort]
+
+  import SettingStore.Regex.given
+  val proxyDomainRegex = settingStore[Regex](
+    "relayProxyDomainRegex",
+    default = "-".r,
+    text = "Broadcast: source domains that use a proxy, as a regex".some
+  ).taggedWith[ProxyDomainRegex]
+
   // start the sync scheduler
   wire[RelayFetch]
 
-  system.scheduler.scheduleWithFixedDelay(1 minute, 1 minute): () =>
+  scheduler.scheduleWithFixedDelay(1 minute, 1 minute): () =>
     api.autoStart >> api.autoFinishNotSyncing
 
   lila.common.Bus.subscribeFuns(
@@ -71,9 +102,10 @@ final class Env(
       api.onStudyRemove(studyId)
     },
     "relayToggle" -> { case lila.study.actorApi.RelayToggle(id, v, who) =>
-      studyApi.isContributor(id, who.u) foreach {
-        _ so api.requestPlay(id into RelayRoundId, v)
-      }
+      studyApi
+        .isContributor(id, who.u)
+        .foreach:
+          _ so api.requestPlay(id into RelayRoundId, v)
     },
     "kickStudy" -> { case lila.study.actorApi.Kick(studyId, userId, who) =>
       roundRepo.tourIdByStudyId(studyId).flatMapz(api.kickBroadcast(userId, _, who))
@@ -90,3 +122,7 @@ private class RelayColls(mainDb: lila.db.Db, yoloDb: lila.db.AsyncDb @@ lila.db.
   val round = mainDb(CollName("relay"))
   val tour  = mainDb(CollName("relay_tour"))
   val delay = yoloDb(CollName("relay_delay"))
+
+private trait ProxyCredentials
+private trait ProxyHostPort
+private trait ProxyDomainRegex

@@ -22,11 +22,13 @@ final class UblogApi(
 
   import UblogBsonHandlers.{ *, given }
 
-  def create(data: UblogForm.UblogPostData)(using me: Me): Fu[UblogPost] =
-    val post = data.create(me.value)
+  def create(data: UblogForm.UblogPostData, author: User): Fu[UblogPost] =
+    val post = data.create(author)
     colls.post.insert.one(
-      bsonWriteObjTry[UblogPost](post).get ++ $doc("likers" -> List(me.userId))
+      bsonWriteObjTry[UblogPost](post).get ++ $doc("likers" -> List(author.id))
     ) inject post
+
+  def getByPrismicId(id: String): Fu[Option[UblogPost]] = colls.post.one[UblogPost]($doc("prismicId" -> id))
 
   def update(data: UblogForm.UblogPostData, prev: UblogPost)(using me: Me): Fu[UblogPost] =
     getUserBlog(me.value, insertMissing = true) flatMap { blog =>
@@ -65,9 +67,9 @@ final class UblogApi(
 
   def getPost(id: UblogPostId): Fu[Option[UblogPost]] = colls.post.byId[UblogPost](id)
 
-  def findByUserBlogOrAdmin(id: UblogPostId)(using me: Me): Fu[Option[UblogPost]] =
+  def findEditableByMe(id: UblogPostId)(using me: Me): Fu[Option[UblogPost]] =
     colls.post.byId[UblogPost](id) dmap:
-      _.filter(_.isBy(me) || Granter(_.ModerateBlog))
+      _.filter(_.allows.edit)
 
   def findByIdAndBlog(id: UblogPostId, blog: UblogBlog.Id): Fu[Option[UblogPost]] =
     colls.post.one[UblogPost]($id(id) ++ $doc("blog" -> blog))
@@ -92,9 +94,19 @@ final class UblogApi(
       latestPosts(blogId, nb) map
       (UblogPost.BlogPreview.apply).tupled
 
+  def pinnedPosts(nb: Int): Fu[List[UblogPost.PreviewPost]] =
+    colls.post
+      .find($doc("live" -> true, "pinned" -> true), previewPostProjection.some)
+      .sort($doc("rank" -> -1))
+      .cursor[UblogPost.PreviewPost](ReadPref.sec)
+      .list(nb)
+
   def latestPosts(nb: Int): Fu[List[UblogPost.PreviewPost]] =
     colls.post
-      .find($doc("live" -> true, "topics" $ne UblogTopic.offTopic), previewPostProjection.some)
+      .find(
+        $doc("live" -> true, "pinned" $ne true, "topics" $ne UblogTopic.offTopic),
+        previewPostProjection.some
+      )
       .sort($doc("rank" -> -1))
       .cursor[UblogPost.PreviewPost](ReadPref.sec)
       .list(nb)
@@ -109,18 +121,26 @@ final class UblogApi(
   def postPreview(id: UblogPostId) =
     colls.post.byId[UblogPost.PreviewPost](id, previewPostProjection)
 
-  private def imageRel(post: UblogPost) = s"ublog:${post.id}"
+  object image:
+    private def rel(post: UblogPost) = s"ublog:${post.id}"
 
-  def uploadImage(user: User, post: UblogPost, picture: PicfitApi.FilePart): Fu[UblogPost] =
-    for
-      pic <- picfitApi.uploadFile(imageRel(post), picture, userId = user.id)
+    def upload(user: User, post: UblogPost, picture: PicfitApi.FilePart): Fu[UblogPost] = for
+      pic <- picfitApi.uploadFile(rel(post), picture, userId = user.id)
       image = post.image.fold(UblogImage(pic.id))(_.copy(id = pic.id))
       _ <- colls.post.updateField($id(post.id), "image", image)
     yield post.copy(image = image.some)
 
-  def deleteImage(post: UblogPost): Fu[UblogPost] =
-    picfitApi.deleteByRel(imageRel(post)) >>
-      colls.post.unsetField($id(post.id), "image") inject post.copy(image = none)
+    def deleteAll(post: UblogPost): Funit = for
+      _ <- deleteImage(post)
+      _ <- picfitApi.deleteByIdsAndUser(PicfitApi.findInMarkdown(post.markdown).toSeq, post.created.by)
+    yield ()
+
+    def delete(post: UblogPost): Fu[UblogPost] = for
+      _ <- deleteImage(post)
+      _ <- colls.post.unsetField($id(post.id), "image")
+    yield post.copy(image = none)
+
+    def deleteImage(post: UblogPost): Funit = picfitApi.deleteByRel(rel(post))
 
   private def sendPostToZulipMaybe(user: User, post: UblogPost): Funit =
     (post.markdown.value.sizeIs > 1000) so
@@ -139,13 +159,15 @@ final class UblogApi(
       .list(30)
 
   def delete(post: UblogPost): Funit =
-    colls.post.delete.one($id(post.id)) >>
-      picfitApi.deleteByRel(imageRel(post))
+    colls.post.delete.one($id(post.id)) >> image.deleteAll(post)
 
   def setTier(blog: UblogBlog.Id, tier: UblogBlog.Tier): Funit =
     colls.blog.update
       .one($id(blog), $set("modTier" -> tier, "tier" -> tier), upsert = true)
       .void
+
+  def setRankAdjust(id: UblogPostId, adjust: Int, pinned: Boolean): Funit =
+    colls.post.update.one($id(id), $set("rankAdjustDays" -> adjust, "pinned" -> pinned)).void
 
   def postCursor(user: User): AkkaStreamCursor[UblogPost] =
     colls.post.find($doc("blog" -> s"user:${user.id}")).cursor[UblogPost](ReadPref.priTemp)

@@ -44,6 +44,7 @@ object help:
           header(trans.other()),
           flip,
           zen,
+          row(frag(kbd("shift"), kbd("B")), "Toggle blindfold mode"),
           helpDialog
         )
       )
@@ -60,6 +61,7 @@ object help:
           header(trans.other()),
           flip,
           zen,
+          row(frag(kbd("shift"), kbd("B")), "Toggle blindfold mode"),
           helpDialog
         )
       )
@@ -101,7 +103,8 @@ object help:
             row(kbd("g"), trans.study.annotateWithGlyphs()),
             row(kbd("n"), trans.study.nextChapter()),
             row(kbd("p"), trans.study.prevChapter()),
-            row(frag((1 to 6).map(kbd(_))), trans.toggleGlyphAnnotations())
+            row(frag((1 to 6).map(kbd(_))), trans.toggleGlyphAnnotations()),
+            row(frag(kbd("shift"), (1 to 8).map(kbd(_))), trans.togglePositionAnnotations())
           ),
           header(trans.mouseTricks()),
           tr(
@@ -113,20 +116,6 @@ object help:
               )
             )
           )
-        )
-      )
-    )
-
-  def analyseVariationArrow(using Lang) =
-    div(cls := "help-ephemeral")(
-      p(trans.variationArrowsInfo()),
-      table(
-        tbody(
-          row(kbd("v"), trans.toggleVariationArrows()),
-          row(frag(kbd("↑"), or, kbd("↓"), or, kbd("shift")), trans.keyCycleSelectedVariation()),
-          row(kbd("→"), trans.playSelectedMove()),
-          row(frag(kbd("shift"), kbd("←"), or, kbd("shift"), kbd("K")), trans.keyPreviousBranch()),
-          row(frag(kbd("shift"), kbd("→"), or, kbd("shift"), kbd("J")), trans.keyNextBranch())
         )
       )
     )
@@ -151,6 +140,7 @@ object help:
           row(kbd("who"), readOutOpponentName()),
           row(kbd("draw"), offerOrAcceptDraw()),
           row(kbd("resign"), trans.resignTheGame()),
+          row(kbd("zerk"), trans.arena.berserk()),
           row(kbd("next"), trans.puzzle.nextPuzzle()),
           row(kbd("upv"), trans.puzzle.upVote()),
           row(kbd("downv"), trans.puzzle.downVote()),
@@ -175,12 +165,6 @@ object help:
           )
         )
       )
-    )
-
-  def voiceCoords(using Lang) =
-    frag(
-      h2(trans.voiceCommands.voiceCommands()),
-      "This space for rent"
     )
 
   def voiceMove(using Lang) =
@@ -242,8 +226,8 @@ object help:
               header(trans.keyboardMove.otherCommands()),
               row(voice("no"), cancelTimerOrDenyARequest()),
               row(voice("yes"), playPreferredMoveOrConfirmSomething()),
-              row(voice("stop"), sleep()),
-              row(voice("mic-off"), turnOffVoiceRecognition()),
+              row(voice("vocabulary"), "List all available commands"),
+              row(voice("blindfold"), "Toggle blindfold mode"),
               row(voice("next"), trans.puzzle.nextPuzzle()),
               row(voice("upvote"), trans.puzzle.upVote()),
               row(voice("solve"), showPuzzleSolution()),

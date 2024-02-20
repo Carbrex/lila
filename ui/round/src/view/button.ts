@@ -76,8 +76,8 @@ function rematchButtons(ctrl: RoundController): LooseVNodes {
               ctrl.socket.send('rematch-no');
             } else if (d.opponent.onGame || !d.clock) {
               d.player.offeringRematch = true;
-              ctrl.socket.send('rematch-yes');
-              if (!disabled && !d.opponent.onGame) ctrl.challengeRematch();
+              if (d.opponent.onGame) ctrl.socket.send('rematch-yes');
+              else if (!disabled && !d.opponent.onGame) ctrl.challengeRematch();
             }
           },
           ctrl.redraw,
@@ -286,4 +286,4 @@ export function watcherFollowUp(ctrl: RoundController) {
   return content.find(x => !!x) && h('div.follow-up', content);
 }
 
-const onSuggestionHook: Hooks = util.onInsert(el => lichess.pubsub.emit('round.suggestion', el.textContent));
+const onSuggestionHook: Hooks = util.onInsert(el => site.pubsub.emit('round.suggestion', el.textContent));

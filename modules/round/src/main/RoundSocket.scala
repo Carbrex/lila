@@ -12,7 +12,7 @@ import lila.common.{ Bus, IpAddress, Lilakka }
 import lila.common.Json.given
 import lila.game.{ Event, Game, Pov }
 import lila.hub.actorApi.map.{ Exists, Tell, TellAll, TellIfExists, TellMany }
-import lila.hub.actorApi.round.{ Abort, Berserk, RematchNo, RematchYes, Resign, TourStanding }
+import lila.hub.actorApi.round.{ Abort, Berserk, Rematch, Resign, TourStanding }
 import lila.hub.actorApi.socket.remote.{ TellSriIn, TellSriOut }
 import lila.hub.actorApi.tv.TvSelect
 import lila.hub.AsyncActorConcMap
@@ -70,6 +70,9 @@ final class RoundSocket(
   def gameAndStatusIfPresent(gameId: GameId): Fu[Option[GameAndSocketStatus]] =
     rounds.askIfPresent[GameAndSocketStatus](gameId)(GetGameAndSocketStatus.apply)
 
+  def flushIfPresent(gameId: GameId): Funit =
+    rounds.getIfPresent(gameId).so(_.flushGame())
+
   val rounds = AsyncActorConcMap[GameId, RoundAsyncActor](
     mkAsyncActor =
       id => makeRoundActor(id, SocketVersion(0), roundDependencies.gameRepo game id recoverDefault none),
@@ -98,20 +101,22 @@ final class RoundSocket(
     case Protocol.In.PlayerDo(fullId, tpe) if !stopping =>
       def forward(f: GamePlayerId => Any) = rounds.tell(fullId.gameId, f(fullId.playerId))
       tpe match
-        case "moretime"     => forward(Moretime(_))
-        case "rematch-yes"  => forward(RematchYes(_))
-        case "rematch-no"   => forward(RematchNo(_))
-        case "takeback-yes" => forward(TakebackYes(_))
-        case "takeback-no"  => forward(TakebackNo(_))
-        case "draw-yes"     => forward(DrawYes(_))
-        case "draw-no"      => forward(DrawNo(_))
-        case "draw-claim"   => forward(DrawClaim(_))
-        case "resign"       => forward(Resign(_))
-        case "resign-force" => forward(ResignForce(_))
-        case "draw-force"   => forward(DrawForce(_))
-        case "abort"        => forward(Abort(_))
-        case "outoftime"    => forward(_ => QuietFlag) // mobile app BC
-        case t              => logger.warn(s"Unhandled round socket message: $t")
+        case "moretime"      => forward(Moretime(_))
+        case "rematch-yes"   => forward(Rematch(_, true))
+        case "rematch-no"    => forward(Rematch(_, false))
+        case "takeback-yes"  => forward(Takeback(_, true))
+        case "takeback-no"   => forward(Takeback(_, false))
+        case "draw-yes"      => forward(Draw(_, true))
+        case "draw-no"       => forward(Draw(_, false))
+        case "draw-claim"    => forward(DrawClaim(_))
+        case "resign"        => forward(Resign(_))
+        case "resign-force"  => forward(ResignForce(_))
+        case "blindfold-yes" => forward(Blindfold(_, true))
+        case "blindfold-no"  => forward(Blindfold(_, false))
+        case "draw-force"    => forward(DrawForce(_))
+        case "abort"         => forward(Abort(_))
+        case "outoftime"     => forward(_ => QuietFlag) // mobile app BC
+        case t               => logger.warn(s"Unhandled round socket message: $t")
     case Protocol.In.Flag(gameId, color, fromPlayerId) => rounds.tell(gameId, ClientFlag(color, fromPlayerId))
     case Protocol.In.PlayerChatSay(id, Right(color), msg) =>
       gameIfPresent(id).foreach:
@@ -168,7 +173,14 @@ final class RoundSocket(
     roundHandler orElse remoteSocketApi.baseHandler
   ) andDo send(P.Out.boot)
 
-  Bus.subscribeFun("tvSelect", "roundSocket", "tourStanding", "startGame", "finishGame", "roundUnplayed"):
+  Bus.subscribeFun(
+    "tvSelect",
+    "roundSocket",
+    "tourStanding",
+    "startGame",
+    "finishGame",
+    "roundUnplayed"
+  ):
     case TvSelect(gameId, speed, json) =>
       sendForGameId(gameId)(Protocol.Out.tvSelect(gameId, speed, json))
     case Tell(id, e @ BotConnected(color, v)) =>

@@ -8,7 +8,7 @@ import lila.common.Domain
 final class DisposableEmailDomain(
     ws: StandaloneWSClient,
     providerUrl: String,
-    checkMailBlocked: () => Fu[List[String]]
+    verifyMailBlocked: () => Fu[List[String]]
 )(using Executor):
 
   import DisposableEmailDomain.*
@@ -23,7 +23,7 @@ final class DisposableEmailDomain(
         logger.warn("DisposableEmailDomain.refresh", e)
         Iterator.empty
       }
-      checked <- checkMailBlocked()
+      checked <- verifyMailBlocked()
     do
       val regexStr  = s"${toRegexStr(blacklist)}|${toRegexStr(checked.iterator)}"
       val nbDomains = regexStr.count('|' ==)
@@ -47,7 +47,7 @@ private object DisposableEmailDomain:
   def whitelisted(domain: Domain) = whitelist.contains(domain.withoutSubdomain.|(domain).lower)
 
   private val mxRecordPasslist =
-    Set(Domain("simplelogin.co"), Domain("simplelogin.com"), Domain("anonaddy.me"))
+    Set(Domain("simplelogin.co"), Domain("simplelogin.com"), Domain("anonaddy.me"), Domain("iljmail.com"))
 
   private val staticBlacklist = Set(
     "lichess.org",
@@ -226,5 +226,6 @@ private object DisposableEmailDomain:
     "live.nl",
     "startmail.com",
     "palaciodegranda.com",
-    "laudepalaciogranda.com"
+    "laudepalaciogranda.com",
+    "mozmail.com" // Mozilla Firefox Relay Domain
   )

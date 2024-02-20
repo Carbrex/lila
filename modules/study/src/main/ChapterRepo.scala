@@ -42,7 +42,14 @@ final class ChapterRepo(val coll: AsyncColl)(using Executor, akka.stream.Materia
       "name"       -> true,
       "setup"      -> true,
       "relay.path" -> true,
-      "tags"       -> $doc("$elemMatch" -> $doc("$regex" -> "^Result:"))
+      "tags" -> $doc(
+        "$filter" -> $doc(
+          "input" -> "$tags",
+          "as"    -> "ts",
+          "cond" -> $doc:
+            "$regexMatch" -> $doc("input" -> "$$ts", "regex" -> "^(Result|WhiteTeam|BlackTeam):")
+        )
+      )
     ).some
 
   def orderedMetadataByStudy(studyId: StudyId): Fu[List[Chapter.Metadata]] =
@@ -77,10 +84,7 @@ final class ChapterRepo(val coll: AsyncColl)(using Executor, akka.stream.Materia
 
   def relaysAndTagsByStudyId(studyId: StudyId): Fu[List[Chapter.RelayAndTags]] =
     coll:
-      _.find(
-        $studyId(studyId),
-        $doc("relay" -> true, "tags" -> true).some
-      )
+      _.find($studyId(studyId), $doc("relay" -> true, "tags" -> true).some)
         .cursor[Bdoc]()
         .list(300)
         .map: docs =>
@@ -135,11 +139,7 @@ final class ChapterRepo(val coll: AsyncColl)(using Executor, akka.stream.Materia
   // insert node and its children
   // and sets the parent order field
   def addSubTree(subTree: Branch, newParent: lila.tree.Node, parentPath: UciPath)(chapter: Chapter): Funit =
-    val set = $doc(subTreeToBsonElements(parentPath, subTree)) ++ {
-      (newParent.children.nodes.sizeIs > 1) so $doc(
-        pathToField(parentPath, F.order) -> newParent.children.nodes.map(_.id)
-      )
-    }
+    val set = $doc(subTreeToBsonElements(parentPath, subTree))
     coll(_.update.one($id(chapter.id), $set(set))).void
 
   private def subTreeToBsonElements(parentPath: UciPath, subTree: Branch): List[(String, Bdoc)] =
@@ -152,12 +152,7 @@ final class ChapterRepo(val coll: AsyncColl)(using Executor, akka.stream.Materia
 
   // overrides all children sub-nodes in DB! Make the tree merge beforehand.
   def setChildren(children: Branches)(chapter: Chapter, path: UciPath): Funit =
-    val set: Bdoc = {
-      (children.nodes.sizeIs > 1) so $doc(
-        pathToField(path, F.order) -> children.nodes.map(_.id)
-      )
-    } ++ $doc(childrenTreeToBsonElements(path, children))
-
+    val set: Bdoc = $doc(childrenTreeToBsonElements(path, children))
     coll(_.update.one($id(chapter.id), $set(set))).void
 
   private def childrenTreeToBsonElements(
@@ -270,4 +265,4 @@ final class ChapterRepo(val coll: AsyncColl)(using Executor, akka.stream.Materia
   def delete(id: StudyChapterId): Funit = coll(_.delete.one($id(id))).void
   def delete(c: Chapter): Funit         = delete(c.id)
 
-  private def $studyId(id: StudyId) = $doc("studyId" -> id)
+  def $studyId(id: StudyId) = $doc("studyId" -> id)

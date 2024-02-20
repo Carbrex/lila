@@ -15,7 +15,6 @@ import { NotifCtrl } from './notif';
 import { StudyShare } from './studyShare';
 import { TagsForm } from './studyTags';
 import ServerEval from './serverEval';
-import * as tours from './studyTour';
 import * as xhr from './studyXhr';
 import { path as treePath } from 'tree';
 import {
@@ -33,6 +32,8 @@ import {
   WithPosition,
   TagArray,
   StudyChapterRelay,
+  StudyTour,
+  ChapterId,
 } from './interfaces';
 import GamebookPlayCtrl from './gamebook/gamebookPlayCtrl';
 import { DescriptionCtrl } from './description';
@@ -46,6 +47,7 @@ import { opposite } from 'chessops/util';
 import StudyChaptersCtrl from './studyChapters';
 import { SearchCtrl } from './studySearch';
 import { GamebookOverride } from './gamebook/interfaces';
+import { EvalHitMulti, EvalHitMultiArray } from '../interfaces';
 
 interface Handlers {
   path(d: WithWhoAndPos): void;
@@ -74,6 +76,7 @@ interface Handlers {
   setTags(d: WithWhoAndChap & { tags: TagArray[] }): void;
   validationError(d: { error: string }): void;
   error(msg: string): void;
+  evalHitMulti(e: EvalHitMulti | EvalHitMultiArray): void;
 }
 
 // data.position.path represents the server state
@@ -150,8 +153,23 @@ export default class StudyCtrl {
     );
     this.relay =
       relayData &&
-      new RelayCtrl(this.data.id, relayData, this.send, this.redraw, this.members, this.data.chapter);
-    this.multiBoard = new MultiBoardCtrl(this.data.id, this.redraw, this.ctrl.trans);
+      new RelayCtrl(
+        this.data.id,
+        relayData,
+        this.send,
+        this.redrawAndUpdateAddressBar,
+        this.members,
+        this.data.chapter,
+        this.looksNew(),
+        (id: ChapterId) => this.setChapter(id),
+      );
+    this.multiBoard = new MultiBoardCtrl(
+      this.data.id,
+      this.redraw,
+      this.ctrl.trans,
+      this.ctrl.socket.send,
+      () => this.data.chapter.setup.variant.key,
+    );
     this.form = new StudyForm(
       (d, isNew) => {
         this.send('editStudy', d);
@@ -233,7 +251,14 @@ export default class StudyCtrl {
   send = this.ctrl.socket.send;
   redraw = this.ctrl.redraw;
 
-  startTour = () => tours.study(this.ctrl);
+  startTour = async () => {
+    const [tour] = await Promise.all([
+      site.asset.loadEsm<StudyTour>('study.tour'),
+      site.asset.loadCssPath('shepherd'),
+    ]);
+
+    tour.study(this.ctrl);
+  };
 
   setTab = (tab: Tab) => {
     this.relay?.tourShow(false);
@@ -269,10 +294,10 @@ export default class StudyCtrl {
     const canContribute = this.members.canContribute();
     // unwrite if member lost privileges
     this.vm.mode.write = this.vm.mode.write && canContribute;
-    lichess.pubsub.emit('chat.writeable', this.data.features.chat);
+    site.pubsub.emit('chat.writeable', this.data.features.chat);
     // official broadcasts cannot have local mods
-    lichess.pubsub.emit('chat.permissions', { local: canContribute && !this.relayData?.tour.official });
-    lichess.pubsub.emit('palantir.toggle', this.data.features.chat && !!this.members.myMember());
+    site.pubsub.emit('chat.permissions', { local: canContribute && !this.relayData?.tour.official });
+    site.pubsub.emit('palantir.toggle', this.data.features.chat && !!this.members.myMember());
     const computer: boolean =
       !this.isGamebookPlay() && !!(this.data.chapter.features.computer || this.data.chapter.practice);
     if (!computer) this.ctrl.getCeval().enabled(false);
@@ -344,6 +369,7 @@ export default class StudyCtrl {
     this.commentForm.onSetPath(this.data.chapter.id, this.ctrl.path, this.ctrl.node);
     this.redraw();
     this.ctrl.startCeval();
+    this.updateAddressBar();
   };
 
   xhrReload = throttlePromiseDelay(
@@ -356,7 +382,7 @@ export default class StudyCtrl {
           this.data.id,
           this.vm.mode.sticky ? undefined : this.vm.chapterId,
         )
-        .then(this.onReload, lichess.reload);
+        .then(this.onReload, site.reload);
     },
   );
 
@@ -524,9 +550,19 @@ export default class StudyCtrl {
   explorerGame = (gameId: string, insert: boolean) =>
     this.makeChange('explorerGame', this.withPosition({ gameId, insert }));
   onPremoveSet = () => this.gamebookPlay?.onPremoveSet();
-  looksNew = () => {
-    const cs = this.chapters.list();
-    return cs.length == 1 && cs[0].name == 'Chapter 1' && !this.currentChapter().ongoing;
+  looksNew = () => this.chapters.looksNew() && !this.currentChapter().ongoing;
+  updateAddressBar = () => {
+    const current = location.href;
+    const studyIdOffset = current.indexOf(`/${this.data.id}`);
+    if (studyIdOffset === -1) return;
+    const studyUrl = current.slice(0, studyIdOffset + 9);
+    const chapterUrl = `${studyUrl}/${this.vm.chapterId}`;
+    if (this.relay) this.relay.updateAddressBar(studyUrl, chapterUrl);
+    else if (chapterUrl !== current) history.replaceState({}, '', chapterUrl);
+  };
+  redrawAndUpdateAddressBar = () => {
+    this.redraw();
+    this.updateAddressBar();
   };
   trans = this.ctrl.trans;
   socketHandler = (t: string, d: any) => {
@@ -535,7 +571,7 @@ export default class StudyCtrl {
       handler(d);
       return true;
     }
-    return !!this.relay && this.relay.socketHandler(t, d);
+    return !!this.relay?.socketHandler(t, d);
   };
 
   socketHandlers: Handlers = {
@@ -551,7 +587,7 @@ export default class StudyCtrl {
         return this.xhrReload();
       }
       this.data.position.path = position.path;
-      if (who && who.s === lichess.sri) return;
+      if (who && who.s === site.sri) return;
       this.ctrl.userJump(position.path);
       this.redraw();
     },
@@ -567,7 +603,7 @@ export default class StudyCtrl {
         if (sticky && !this.vm.mode.sticky) this.redraw();
         return;
       }
-      if (sticky && who && who.s === lichess.sri) {
+      if (sticky && who && who.s === site.sri) {
         this.data.position.path = position.path + node.id;
         return;
       }
@@ -589,7 +625,7 @@ export default class StudyCtrl {
       this.setMemberActive(who);
       if (this.wrongChapter(d)) return;
       // deleter already has it done
-      if (who && who.s === lichess.sri) return;
+      if (who && who.s === site.sri) return;
       if (!this.ctrl.tree.pathExists(d.p.path)) return this.xhrReload();
       this.ctrl.tree.deleteNodeAt(position.path);
       if (this.vm.mode.sticky) this.ctrl.jump(this.ctrl.path);
@@ -600,7 +636,7 @@ export default class StudyCtrl {
         who = d.w;
       this.setMemberActive(who);
       if (this.wrongChapter(d)) return;
-      if (who && who.s === lichess.sri) return;
+      if (who && who.s === site.sri) return;
       if (!this.ctrl.tree.pathExists(d.p.path)) return this.xhrReload();
       this.ctrl.tree.promoteAt(position.path, d.toMainline);
       if (this.vm.mode.sticky) this.ctrl.jump(this.ctrl.path);
@@ -621,7 +657,7 @@ export default class StudyCtrl {
     },
     descChapter: d => {
       this.setMemberActive(d.w);
-      if (d.w && d.w.s === lichess.sri) return;
+      if (d.w && d.w.s === site.sri) return;
       if (this.data.chapter.id === d.chapterId) {
         this.data.chapter.description = d.desc;
         this.chapterDesc.set(d.desc);
@@ -630,7 +666,7 @@ export default class StudyCtrl {
     },
     descStudy: d => {
       this.setMemberActive(d.w);
-      if (d.w && d.w.s === lichess.sri) return;
+      if (d.w && d.w.s === site.sri) return;
       this.data.description = d.desc;
       this.studyDesc.set(d.desc);
       this.redraw();
@@ -644,7 +680,7 @@ export default class StudyCtrl {
       this.setMemberActive(d.w);
       if (d.s && !this.vm.mode.sticky) this.vm.behind++;
       if (d.s) this.data.position = d.p;
-      else if (d.w && d.w.s === lichess.sri) {
+      else if (d.w && d.w.s === site.sri) {
         this.vm.mode.write = this.relayData ? this.relayRecProp() : this.nonRelayRecMapProp(this.data.id);
         this.vm.chapterId = d.p.chapterId;
       }
@@ -669,7 +705,7 @@ export default class StudyCtrl {
         who = d.w;
       this.setMemberActive(who);
       if (d.p.chapterId !== this.vm.chapterId) return;
-      if (who && who.s === lichess.sri) return this.redraw(); // update shape indicator in column move view
+      if (who && who.s === site.sri) return this.redraw(); // update shape indicator in column move view
       this.ctrl.tree.setShapes(d.s, this.ctrl.path);
       if (this.ctrl.path === position.path) this.ctrl.withCg(cg => cg.setShapes(d.s));
       this.redraw();
@@ -731,11 +767,17 @@ export default class StudyCtrl {
     },
     liking: d => {
       this.data.likes = d.l.likes;
-      if (d.w && d.w.s === lichess.sri) this.data.liked = d.l.me;
+      if (d.w && d.w.s === site.sri) this.data.liked = d.l.me;
       this.redraw();
     },
     error(msg: string) {
       alert(msg);
+    },
+    evalHitMulti: (e: EvalHitMulti | EvalHitMultiArray) => {
+      ('multi' in e ? e.multi : [e]).forEach(ev => {
+        this.multiBoard.multiCloudEval.onCloudEval(ev);
+        this.relay?.teams?.multiCloudEval.onCloudEval(ev);
+      });
     },
   };
 }

@@ -30,6 +30,7 @@ object tourForm:
         h1(dataIcon := licon.Pencil, cls := "text"):
           a(href := routes.RelayTour.show(t.slug, t.id))(t.name)
       ,
+      image(t),
       postForm(cls := "form3", action := routes.RelayTour.update(t.id))(
         inner(form),
         form3.actions(
@@ -51,10 +52,28 @@ object tourForm:
       )
     )
 
+  private def image(t: RelayTour)(using ctx: PageContext) =
+    div(cls := "relay-image-edit", data("post-url") := routes.RelayTour.image(t.id))(
+      views.html.relay.tour.thumbnail(t, _.Size.Small)(
+        cls               := List("drop-target" -> true, "user-image" -> t.image.isDefined),
+        attr("draggable") := "true"
+      ),
+      div(
+        p("Upload a beautiful image to represent your tournament."),
+        p("The image must be twice as wide as it is tall. Recommended resolution: 1000x500."),
+        p(
+          "A picture of the city where the tournament takes place is a good idea, but feel free to design something different."
+        ),
+        p(trans.streamer.maxSize(s"${lila.memo.PicfitApi.uploadMaxMb}MB.")),
+        form3.file.selectImage
+      )
+    )
+
   private def layout(title: String, menu: Option[String])(body: Modifier*)(using PageContext) =
     views.html.base.layout(
       title = title,
-      moreCss = cssTag("relay.form")
+      moreCss = cssTag("relay.form"),
+      moreJs = jsModule("relayForm")
     )(menu match
       case Some(active) =>
         main(cls := "page page-menu")(
@@ -92,13 +111,32 @@ object tourForm:
       form3.checkbox(
         form("autoLeaderboard"),
         automaticLeaderboard(),
-        help = automaticLeaderboardHelp().some,
-        half = true
+        help = automaticLeaderboardHelp().some
       ),
+      form3.checkbox(
+        form("teamTable"),
+        "Team tournament",
+        help = frag("Show a team leaderboard. Requires WhiteTeam and BlackTeam PGN tags.").some
+      )
+    ),
+    form3.split(
       form3.group(
         form("players"),
         replace(),
         help = replaceHelp().some,
+        half = true
+      )(form3.textarea(_)(rows := 3)),
+      form3.group(
+        form("teams"),
+        "Optional: assign players to teams",
+        help = lila.common.String.html
+          .nl2br("""One line per player, formatted as such:
+Team name; Player name
+Example:
+Offerspill;Magnus Carlsen
+Stavanger;M. Fiskaaen
+By default the PGN tags WhiteTeam and BlackTeam are used.""")
+          .some,
         half = true
       )(form3.textarea(_)(rows := 3))
     ),

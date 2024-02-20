@@ -32,6 +32,8 @@ trait AssetHelper extends HasEnv:
 
   def cdnUrl(path: String) = s"$assetBaseUrl$path"
 
+  def flairSrc(flair: Flair) = staticAssetUrl(s"$flairVersion/flair/img/$flair.webp")
+
   def cssTag(name: String)(using ctx: Context): Frag =
     cssTagWithDirAndTheme(name, isRTL, ctx.pref.currentBg)
 
@@ -61,20 +63,22 @@ if (window.matchMedia('(prefers-color-scheme: dark)').media === 'not all')
   // load iife scripts in <head> and defer
   def iifeModule(path: String): Frag = script(deferAttr, src := assetUrl(path))
 
+  private val loadEsmFunction = "site.asset.loadEsm"
+
   // jsModule is esm, no defer needed
   def jsModule(name: String): Frag =
     script(tpe := "module", src := assetUrl(s"compiled/$name${minifiedAssets so ".min"}.js"))
   def jsModuleInit(name: String)(using PageContext) =
-    frag(jsModule(name), embedJsUnsafeLoadThen(s"lichess.asset.loadEsm('$name')"))
+    frag(jsModule(name), embedJsUnsafeLoadThen(s"$loadEsmFunction('$name')"))
   def jsModuleInit(name: String, text: String)(using PageContext) =
-    frag(jsModule(name), embedJsUnsafeLoadThen(s"lichess.asset.loadEsm('$name',{init:$text})"))
+    frag(jsModule(name), embedJsUnsafeLoadThen(s"$loadEsmFunction('$name',{init:$text})"))
   def jsModuleInit(name: String, json: JsValue)(using PageContext): Frag =
     jsModuleInit(name, safeJsonValue(json))
   def jsModuleInit(name: String, text: String, nonce: lila.api.Nonce) =
-    frag(jsModule(name), embedJsUnsafeLoadThen(s"lichess.asset.loadEsm('$name',{init:$text})", nonce))
+    frag(jsModule(name), embedJsUnsafeLoadThen(s"$loadEsmFunction('$name',{init:$text})", nonce))
   def jsModuleInit(name: String, json: JsValue, nonce: lila.api.Nonce) = frag(
     jsModule(name),
-    embedJsUnsafeLoadThen(s"lichess.asset.loadEsm('$name',{init:${safeJsonValue(json)}})", nonce)
+    embedJsUnsafeLoadThen(s"$loadEsmFunction('$name',{init:${safeJsonValue(json)}})", nonce)
   )
   def analyseInit(mode: String, json: JsValue)(using ctx: PageContext) =
     jsModuleInit("analysisBoard", Json.obj("mode" -> mode, "cfg" -> json))
@@ -86,15 +90,7 @@ if (window.matchMedia('(prefers-color-scheme: dark)').media === 'not all')
   def captchaTag                             = jsModule("captcha")
   def cashTag                                = iifeModule("javascripts/vendor/cash.min.js")
   def fingerprintTag                         = iifeModule("javascripts/fipr.js")
-  def highchartsLatestTag                    = iifeModule("npm/highcharts-4.2.5/highcharts.js")
-  def highchartsMoreTag                      = iifeModule("npm/highcharts-4.2.5/highcharts-more.js")
   def chessgroundTag = script(tpe := "module", src := assetUrl("npm/chessground.min.js"))
-
-  def prismicJs(using PageContext): Frag =
-    raw:
-      isGranted(_.Prismic).so:
-        embedJsUnsafe("""window.prismic={endpoint:'https://lichess.prismic.io/api/v2'}""").render ++
-          """<script src="//static.cdn.prismic.io/prismic.min.js"></script>"""
 
   def basicCsp(using ctx: Context): ContentSecurityPolicy =
     val sockets = socketDomains map { x => s"wss://$x${!ctx.req.secure so s" ws://$x"}" }
@@ -103,11 +99,11 @@ if (window.matchMedia('(prefers-color-scheme: dark)').media === 'not all')
     ContentSecurityPolicy(
       defaultSrc = List("'self'", assetDomain.value),
       connectSrc =
-        "'self'" :: "data:" :: assetDomain.value :: sockets ::: env.explorerEndpoint :: env.tablebaseEndpoint :: localDev,
+        "'self'" :: "blob:" :: "data:" :: assetDomain.value :: sockets ::: "wss://cf-socket.lichess.org" :: env.explorerEndpoint :: env.tablebaseEndpoint :: localDev,
       styleSrc = List("'self'", "'unsafe-inline'", assetDomain.value),
       frameSrc = List("'self'", assetDomain.value, "www.youtube.com", "player.twitch.tv"),
       workerSrc = List("'self'", assetDomain.value, "blob:"),
-      imgSrc = List("data:", "*"),
+      imgSrc = List("'self'", "blob:", "data:", "*"),
       scriptSrc = List("'self'", assetDomain.value),
       fontSrc = List("'self'", assetDomain.value),
       baseUri = List("'none'")
@@ -127,8 +123,10 @@ if (window.matchMedia('(prefers-color-scheme: dark)').media === 'not all')
   def embedJsUnsafe(js: String, nonce: lila.api.Nonce): Frag = raw:
     s"""<script nonce="$nonce">$js</script>"""
 
+  private val onLoadFunction = "site.load.then"
+
   def embedJsUnsafeLoadThen(js: String)(using PageContext): Frag =
-    embedJsUnsafe(s"""lichess.load.then(()=>{$js})""")
+    embedJsUnsafe(s"""$onLoadFunction(()=>{$js})""")
 
   def embedJsUnsafeLoadThen(js: String, nonce: lila.api.Nonce): Frag =
-    embedJsUnsafe(s"""lichess.load.then(()=>{$js})""", nonce)
+    embedJsUnsafe(s"""$onLoadFunction(()=>{$js})""", nonce)

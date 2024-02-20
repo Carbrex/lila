@@ -236,7 +236,7 @@ final class ReportApi(
           .void
     yield ()
 
-  // `seriousness` depends on the number of previous warnings, and number of games throwed away
+  // `seriousness` depends on the number of previous warnings, and number of games thrown away
   def autoBoostReport(winnerId: UserId, loserId: UserId, seriousness: Int): Funit =
     securityApi.shareAnIpOrFp(winnerId, loserId) zip
       userRepo.pair(winnerId, loserId) zip getLichessReporter flatMap {
@@ -381,16 +381,21 @@ final class ReportApi(
       .cursor[Report]()
       .list(nb)
 
-  def byAndAbout(user: User, nb: Int)(using Me): Fu[Report.ByAndAbout] =
-    for
-      by <-
-        coll
-          .find($doc("atoms.by" -> user.id))
-          .sort(sortLastAtomAt)
-          .cursor[Report](ReadPref.priTemp)
-          .list(nb)
-      about <- recent(Suspect(user), nb, _.priTemp)
-    yield Report.ByAndAbout(by, Room.filterGranted(about))
+  def byAndAbout(user: User, nb: Int)(using Me): Fu[Report.ByAndAbout] = for
+    by <-
+      coll
+        .find($doc("atoms.by" -> user.id))
+        .sort(sortLastAtomAt)
+        .cursor[Report](ReadPref.priTemp)
+        .list(nb)
+    about <- recent(Suspect(user), nb, _.priTemp)
+  yield Report.ByAndAbout(by, Room.filterGranted(about))
+
+  def personalExport(user: User): Fu[List[Report.Atom]] =
+    coll
+      .list[Report]($doc("atoms.by" -> user.id))
+      .map:
+        _.flatMap(_ atomBy user.id.into(ReporterId))
 
   def currentCheatScore(suspect: Suspect): Fu[Option[Report.Score]] =
     coll.primitiveOne[Report.Score](

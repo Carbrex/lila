@@ -20,7 +20,7 @@ export function puzzleBox(ctrl: PuzzleCtrl): VNode {
 const angleImg = (ctrl: PuzzleCtrl): string => {
   const angle = ctrl.data.angle;
   const name = angle.opening ? 'opening' : angle.key.startsWith('mateIn') ? 'mate' : angle.key;
-  return lichess.asset.url(`images/puzzle-themes/${name}.svg`);
+  return site.asset.url(`images/puzzle-themes/${name}.svg`);
 };
 
 const puzzleInfos = (ctrl: PuzzleCtrl, puzzle: Puzzle): VNode =>
@@ -52,7 +52,7 @@ const puzzleInfos = (ctrl: PuzzleCtrl, puzzle: Puzzle): VNode =>
             'ratingX',
             !ctrl.streak && ctrl.mode === 'play'
               ? h('span.hidden', ctrl.trans.noarg('hidden'))
-              : h('strong', puzzle.rating),
+              : h('strong', `${puzzle.rating}`),
           ),
         ),
       h('p', ctrl.trans.vdomPlural('playedXTimes', puzzle.plays, h('strong', numberFormat(puzzle.plays)))),
@@ -94,7 +94,7 @@ const renderStreak = (streak: PuzzleStreak, noarg: TransNoArg) =>
       : h(
           'div.puzzle__side__streak__score.text',
           { attrs: dataIcon(licon.ArrowThruApple) },
-          streak.data.index,
+          `${streak.data.index}`,
         ),
   );
 

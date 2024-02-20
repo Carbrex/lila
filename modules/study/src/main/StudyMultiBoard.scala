@@ -47,7 +47,7 @@ final class StudyMultiBoard(
   final private class ChapterPreviewAdapter(studyId: StudyId, playing: Boolean)
       extends AdapterLike[ChapterPreview]:
 
-    private val selector = $doc("studyId" -> studyId) ++ playing.so(playingSelector)
+    private val selector = chapterRepo.$studyId(studyId) ++ playing.so(playingSelector)
 
     def nbResults: Fu[Int] = chapterRepo.coll(_.countSel(selector))
 
@@ -60,71 +60,67 @@ final class StudyMultiBoard(
               Sort(Ascending("order")),
               Skip(offset),
               Limit(length),
-              Project(
+              Project:
                 $doc(
-                  "comp" -> $doc(
+                  "comp" -> $doc:
                     "$function" -> $doc(
                       "lang" -> "js",
                       "args" -> $arr("$root", "$tags"),
-                      "body" -> """function(root, tags) {
-                                    tags = tags.filter(t => t.startsWith('White') || t.startsWith('Black') || t.startsWith('Result'));
-                                    const [node, clockTicking] = tags.length ?
-                                      Object.keys(root).reduce(
-                                        ([node, clockTicking, path, pathTicking], i) => {
-                                          if (root[i].p > node.p && i.startsWith(path)) {
-                                            clockTicking = node;
-                                            pathTicking = path;
-                                            node = root[i];
-                                            path = i;
-                                          } else if (clockTicking && root[i].p > clockTicking.p && i.startsWith(pathTicking)) {
-                                            clockTicking = root[i];
-                                            pathTicking = i;
-                                          }
-                                          return [node, clockTicking, path, pathTicking]
-                                        },
-                                        [root['_'], undefined, '', undefined]
-                                      ).slice(0, 2) : [root['_'], undefined];
-                                    const [whiteClock, blackClock] = clockTicking ? node.f.includes(" b") ? [node.l, clockTicking.l] : [clockTicking.l, node.l] : [undefined, undefined]
+                      "body" -> """
+function(root, tags) {
+  tags = tags.filter(t => t.startsWith('White') || t.startsWith('Black') || t.startsWith('Result'));
+  const [node, clockTicking] = tags.length ?
+    Object.keys(root).reduce(
+      ([node, clockTicking, path, pathTicking], i) => {
+        if (root[i].p > node.p && i.startsWith(path)) {
+          clockTicking = node;
+          pathTicking = path;
+          node = root[i];
+          path = i;
+        } else if (clockTicking && root[i].p > clockTicking.p && i.startsWith(pathTicking)) {
+          clockTicking = root[i];
+          pathTicking = i;
+        }
+        return [node, clockTicking, path, pathTicking]
+      },
+      [root['_'], undefined, '', undefined]
+    ).slice(0, 2) : [root['_'], undefined];
+  const [whiteClock, blackClock] = clockTicking ? node.f.includes(" b") ? [node.l, clockTicking.l] : [clockTicking.l, node.l] : [undefined, undefined]
 
-                                    return {
-                                      node: {
-                                        fen: node.f,
-                                        uci: node.u,
-                                      },
-                                      tags,
-                                      clocks: {
-                                        black: blackClock,
-                                        white: whiteClock,
-                                      }
-                                    }
-                                  }""".stripMargin
+  return {
+    node: {
+      fen: node.f,
+      uci: node.u,
+    },
+    tags,
+    clocks: {
+      black: blackClock,
+      white: whiteClock,
+    }
+  }
+}""".stripMargin
                     )
-                  ),
+                  ,
                   "orientation" -> "$setup.orientation",
-                  "name"        -> true,
                   "lastMoveAt"  -> "$relay.lastMoveAt"
                 )
-              )
             )
         }
         .map: r =>
           for
-            doc  <- r
-            id   <- doc.getAsOpt[StudyChapterId]("_id")
-            name <- doc.getAsOpt[StudyChapterName]("name")
+            doc <- r
+            id  <- doc.getAsOpt[StudyChapterId]("_id")
             lastMoveAt = doc.getAsOpt[Instant]("lastMoveAt")
-            comp   <- doc.getAsOpt[Bdoc]("comp")
-            node   <- comp.getAsOpt[Bdoc]("node")
-            fen    <- node.getAsOpt[Fen.Epd]("fen")
-            clocks <- comp.getAsOpt[Bdoc]("clocks")
-            lastMove   = node.getAsOpt[Uci]("uci")
-            tags       = comp.getAsOpt[Tags]("tags")
-            blackClock = clocks.getAsOpt[Centis]("black")
-            whiteClock = clocks.getAsOpt[Centis]("white")
+            comp      <- doc.getAsOpt[Bdoc]("comp")
+            node      <- comp.getAsOpt[Bdoc]("node")
+            fen       <- node.getAsOpt[Fen.Epd]("fen")
+            clocksDoc <- comp.getAsOpt[Bdoc]("clocks")
+            clocks   = ByColor[Option[Centis]](c => clocksDoc.getAsOpt[Centis](c.name))
+            lastMove = node.getAsOpt[Uci]("uci")
+            tags     = comp.getAsOpt[Tags]("tags")
           yield ChapterPreview(
             id = id,
-            name = name,
-            players = tags flatMap ChapterPreview.players(blackClock = blackClock, whiteClock = whiteClock),
+            players = tags flatMap ChapterPreview.players(clocks),
             orientation = doc.getAsOpt[Color]("orientation") | Color.White,
             fen = fen,
             lastMove = lastMove,
@@ -135,17 +131,15 @@ final class StudyMultiBoard(
 
   import lila.common.Json.{ writeAs, given }
 
-  given Writes[ChapterPreview.Player] = Writes[ChapterPreview.Player] { p =>
+  given Writes[ChapterPreview.Player] = Writes[ChapterPreview.Player]: p =>
     Json
       .obj("name" -> p.name)
       .add("title" -> p.title)
       .add("rating" -> p.rating)
       .add("clock" -> p.clock)
-  }
 
-  given Writes[ChapterPreview.Players] = Writes[ChapterPreview.Players] { players =>
+  given Writes[ChapterPreview.Players] = Writes[ChapterPreview.Players]: players =>
     Json.obj("white" -> players.white, "black" -> players.black)
-  }
 
   given Writes[Outcome] = writeAs(_.toString.replace("1/2", "½"))
 
@@ -155,7 +149,6 @@ object StudyMultiBoard:
 
   case class ChapterPreview(
       id: StudyChapterId,
-      name: StudyChapterName,
       players: Option[ChapterPreview.Players],
       orientation: Color,
       fen: Fen.Epd,
@@ -171,11 +164,7 @@ object StudyMultiBoard:
 
     type Players = ByColor[Player]
 
-    def players(blackClock: Option[Centis], whiteClock: Option[Centis])(tags: Tags): Option[Players] =
-      for
-        wName <- tags(_.White)
-        bName <- tags(_.Black)
-      yield ByColor(
-        white = Player(wName, tags(_.WhiteTitle), tags(_.WhiteElo).flatMap(_.toIntOption), whiteClock),
-        black = Player(bName, tags(_.BlackTitle), tags(_.BlackElo).flatMap(_.toIntOption), blackClock)
-      )
+    def players(clocks: ByColor[Option[Centis]])(tags: Tags): Option[Players] =
+      chess.ByColor(tags.players(_)) map: names =>
+        names zip tags.titles zip tags.elos zip clocks map:
+          case (((n, t), e), c) => Player(n, t, e, c)

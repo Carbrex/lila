@@ -12,7 +12,6 @@ case class Pref(
     theme3d: String,
     pieceSet3d: String,
     soundSet: String,
-    blindfold: Int,
     autoQueen: Int,
     autoThreefold: Int,
     takeback: Int,
@@ -44,6 +43,7 @@ case class Pref(
     pieceNotation: Int,
     resizeHandle: Int,
     agreement: Int,
+    usingAltSocket: Option[Boolean],
     tags: Map[String, String] = Map.empty
 ):
 
@@ -80,8 +80,6 @@ case class Pref(
       case Animation.SLOW => 120
       case _              => 70
 
-  def isBlindfold = blindfold == Pref.Blindfold.YES
-
   def bgImgOrDefault = bgImg | Pref.defaultBgImg
 
   def pieceNotationIsLetter = pieceNotation == PieceNotation.LETTER
@@ -93,14 +91,13 @@ case class Pref(
 
   def is2d = !is3d
 
-  def agreementNeededSince: Option[Instant] =
-    Agreement.showPrompt && agreement < Agreement.current option Agreement.changedAt
-
   def agree = copy(agreement = Agreement.current)
 
   def hasKeyboardMove = keyboardMove == KeyboardMove.YES
 
-  def hasVoice = voice.contains(Voice.YES)
+  def hasVoice = voice.has(Voice.YES)
+
+  def isUsingAltSocket = usingAltSocket.has(true)
 
   // atob("aHR0cDovL2NoZXNzLWNoZWF0LmNvbS9ob3dfdG9fY2hlYXRfYXRfbGljaGVzcy5odG1s")
   def botCompatible =
@@ -260,12 +257,6 @@ object Pref:
     val choices = Seq(
       SYMBOL -> "Chess piece symbol",
       LETTER -> "PGN letter (K, Q, R, B, N)"
-    )
-
-  object Blindfold extends BooleanPref:
-    override val choices = Seq(
-      NO  -> "What? No!",
-      YES -> "Yes, hide the pieces"
     )
 
   object AutoThreefold:
@@ -445,7 +436,6 @@ object Pref:
     theme3d = Theme3d.default.name,
     pieceSet3d = PieceSet3d.default.name,
     soundSet = SoundSet.default.key,
-    blindfold = Blindfold.NO,
     autoQueen = AutoQueen.PREMOVE,
     autoThreefold = AutoThreefold.ALWAYS,
     takeback = Takeback.ALWAYS,
@@ -477,6 +467,7 @@ object Pref:
     pieceNotation = PieceNotation.SYMBOL,
     resizeHandle = ResizeHandle.INITIAL,
     agreement = Agreement.current,
+    usingAltSocket = none,
     tags = Map.empty
   )
 

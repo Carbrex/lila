@@ -5,6 +5,7 @@
   <string name="toInviteSomeoneToPlayGiveThisUrl">Per invitare qualcuno a giocare, dagli questo URL</string>
   <string name="gameOver">Partita terminata</string>
   <string name="waitingForOpponent">In attesa dell\'avversario</string>
+  <string name="orLetYourOpponentScanQrCode">O fai scansionare questo codice QR al tuo avversario</string>
   <string name="waiting">In attesa</string>
   <string name="yourTurn">Tocca a te</string>
   <string name="aiNameLevelAiLevel">%1$s livello %2$s</string>
@@ -405,7 +406,7 @@
   <string name="importGameExplanation">Quando incolli una partita tramite PGN potrai rivederla,
 analizzarla con il computer, commentarla in chat, e condividerla tramite un indirizzo URL.</string>
   <string name="importGameCaveat">Le varianti saranno cancellate. Per salvarle, importa il PGN in uno studio.</string>
-  <string name="importGameDataPrivacyWarning">Questo PGN è accessibile dal pubblico. Per importare un gioco privatamente, utilizza uno studio.</string>
+  <string name="importGameDataPrivacyWarning">Questo PGN è accessibile pubblicamente. Per importare una partita privatamente, utilizza uno studio.</string>
   <plurals name="nbImportedGames">
     <item quantity="one">%s partita importata</item>
     <item quantity="other">%s partite importate</item>
@@ -418,6 +419,7 @@ analizzarla con il computer, commentarla in chat, e condividerla tramite un indi
   <string name="blackCheckmatesInOneMove">Il Nero dà matto in una mossa</string>
   <string name="retry">Riprova</string>
   <string name="reconnecting">Riconnessione</string>
+  <string name="noNetwork">Non in linea</string>
   <plurals name="nbFriendsOnline">
     <item quantity="one">%s amico online</item>
     <item quantity="other">%s amici online</item>
@@ -704,6 +706,7 @@ analizzarla con il computer, commentarla in chat, e condividerla tramite un indi
   <string name="toggleVariationArrows">Mostra le frecce delle varianti</string>
   <string name="cyclePreviousOrNextVariation">Vai alla variante precedente/successiva</string>
   <string name="toggleGlyphAnnotations">Mostra i simboli delle annotazioni</string>
+  <string name="togglePositionAnnotations">Mostra le annotazioni della posizione</string>
   <string name="variationArrowsInfo">Le frecce delle varianti ti permettono di esplorare le mosse senza usare la lista.</string>
   <string name="playSelectedMove">gioca la mossa selezionata</string>
   <string name="newTournament">Nuovo torneo</string>

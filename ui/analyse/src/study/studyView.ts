@@ -48,7 +48,7 @@ function toolButton(opts: ToolButtonOpts): VNode {
         opts.ctrl.redraw,
       ),
     },
-    [opts.count && h('count.data-count', { attrs: { 'data-count': opts.count } }), opts.icon],
+    [!!opts.count && h('count.data-count', { attrs: { 'data-count': opts.count } }), opts.icon],
   );
 }
 
@@ -60,7 +60,7 @@ function buttons(root: AnalyseCtrl): VNode {
   return h('div.study__buttons', [
     h('div.left-buttons.tabs-horiz', { attrs: { role: 'tablist' } }, [
       // distinct classes (sync, write) allow snabbdom to differentiate buttons
-      showSticky &&
+      !!showSticky &&
         h(
           'a.mode.sync',
           {
@@ -165,7 +165,7 @@ export function side(ctrl: StudyCtrl): VNode {
       'span.relay-tour.text',
       {
         class: { active: tourShown },
-        hook: bind('mousedown', () => tourShow(true), ctrl.redraw),
+        hook: bind('mousedown', () => tourShow(true), ctrl.redrawAndUpdateAddressBar),
         attrs: { ...dataIcon(licon.RadioTower), role: 'tab' },
       },
       'Broadcast',

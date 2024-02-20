@@ -25,7 +25,6 @@
   <string name="longestStreak">طولانی‌ترین توالی: %s</string>
   <string name="currentStreak">استمرار فعلی: %s</string>
   <string name="bestRated">بهترین پیروزی های رسمی</string>
-  <string name="worstRated">بدترین باخت های رسمی</string>
   <string name="gamesInARow">بازی های متوالی انجام شده</string>
   <string name="lessThanOneHour">کمتر از یک ساعت بین بازی‌ها</string>
   <string name="maxTimePlaying">بیشترین زمانی که صرف بازی شده است</string>

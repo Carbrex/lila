@@ -130,7 +130,7 @@ object JsonView:
       "move" -> List(
         good.copy(name = trans.goodMove.txt()),
         mistake.copy(name = trans.mistake.txt()),
-        brillant.copy(name = trans.brilliantMove.txt()),
+        brilliant.copy(name = trans.brilliantMove.txt()),
         blunder.copy(name = trans.blunder.txt()),
         interesting.copy(name = trans.interestingMove.txt()),
         dubious.copy(name = trans.dubiousMove.txt()),
@@ -196,6 +196,7 @@ object JsonView:
       .obj("id" -> c._id, "name" -> c.name)
       .add("ongoing", c.looksOngoing)
       .add("res" -> c.resultStr)
+      .add("teams" -> c.teams.map((w, b) => Json.arr(w, b)))
 
   private[study] given Writes[Position.Ref] = Json.writes
   private[study] given Writes[Study.Liking] = Json.writes

@@ -8,6 +8,7 @@
   </plurals>
   <string name="liveBroadcasts">Live-Turnierübertragungen</string>
   <string name="newBroadcast">Neue Liveübertragung</string>
+  <string name="subscribedBroadcasts">Abonnierte Übertragungen</string>
   <string name="aboutBroadcasts">Über Übertragungen</string>
   <string name="noRoundsYet">Noch keine Runden.</string>
   <string name="howToUseLichessBroadcasts">Wie man Lichess-Übertragungen benutzt.</string>
@@ -16,7 +17,7 @@
   <string name="ongoing">Laufend</string>
   <string name="upcoming">Demnächst</string>
   <string name="completed">Beendet</string>
-  <string name="completedHelp">Lichess erkennt den Abschluss einer Runde anhand der Quellspiele. Verwenden Sie diesen Schalter, wenn keine Quelle vorhanden ist.</string>
+  <string name="completedHelp">Lichess erkennt Rundenabschlüsse basierend auf den Quellspielen. Verwende diesen Schalter, wenn keine Quelle vorhanden ist.</string>
   <string name="roundName">Rundenname</string>
   <string name="roundNumber">Rundennummer</string>
   <string name="tournamentName">Turniername</string>

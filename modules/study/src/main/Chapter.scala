@@ -78,6 +78,7 @@ case class Chapter(
     name = name,
     setup = setup,
     outcome = tags.outcome.isDefined option tags.outcome,
+    teams = tags(_.WhiteTeam) zip tags(_.BlackTeam),
     hasRelayPath = relay.exists(!_.path.isEmpty)
   )
 
@@ -116,29 +117,31 @@ object Chapter:
     def isFromFen = ~fromFen
 
   case class Relay(
-      index: Int, // game index in the source URL
+      index: Option[Int], // game index in the source URL, none to always match tags
       path: UciPath,
       lastMoveAt: Instant
   ):
     def secondsSinceLastMove: Int = (nowSeconds - lastMoveAt.toSeconds).toInt
+    def isPush                    = index.isEmpty
 
   case class ServerEval(path: UciPath, done: Boolean)
 
   case class RelayAndTags(id: StudyChapterId, relay: Relay, tags: Tags):
-
     def looksAlive =
       tags.outcome.isEmpty &&
         relay.lastMoveAt.isAfter:
           nowInstant.minusMinutes:
             tags.clockConfig.fold(40)(_.limitInMinutes.toInt / 2 atLeast 15 atMost 60)
-
     def looksOver = !looksAlive
+
+  type TeamName = String
 
   case class Metadata(
       _id: StudyChapterId,
       name: StudyChapterName,
       setup: Setup,
       outcome: Option[Option[Outcome]],
+      teams: Option[(TeamName, TeamName)],
       hasRelayPath: Boolean
   ) extends Like:
 

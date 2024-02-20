@@ -19,7 +19,7 @@ function featuredPlayer(game: FeaturedGame, color: Color, opts: TournamentOpts) 
       ? h(`span.mini-game__clock.mini-game__clock--${color}`, {
           attrs: { 'data-time': game.c[color], 'data-managed': 1 },
         })
-      : h('span.mini-game__result', game.winner ? (game.winner == color ? 1 : 0) : '½'),
+      : h('span.mini-game__result', game.winner ? (game.winner == color ? '1' : '0') : '½'),
   ]);
 }
 
@@ -28,7 +28,7 @@ function featured(game: FeaturedGame, opts: TournamentOpts): VNode {
     `div.tour__featured.mini-game.mini-game-${game.id}.mini-game--init.is2d`,
     {
       attrs: { 'data-state': `${game.fen},${game.orientation},${game.lastMove}`, 'data-live': game.id },
-      hook: onInsert(lichess.powertip.manualUserIn),
+      hook: onInsert(site.powertip.manualUserIn),
     },
     [
       featuredPlayer(game, opposite(game.orientation), opts),
@@ -60,7 +60,7 @@ function renderDuel(ctrl: TournamentController) {
     ]);
 }
 
-const initMiniGame = (node: VNode) => lichess.miniGame.initAll(node.elm as HTMLElement);
+const initMiniGame = (node: VNode) => site.miniGame.initAll(node.elm as HTMLElement);
 
 export default function (ctrl: TournamentController): VNode {
   return h('div.tour__table', { hook: { insert: initMiniGame, postpatch: initMiniGame } }, [

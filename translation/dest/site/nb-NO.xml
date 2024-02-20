@@ -5,6 +5,7 @@
   <string name="toInviteSomeoneToPlayGiveThisUrl">For å invitere noen til å spille, gi dem denne lenken</string>
   <string name="gameOver">Partiet er avsluttet</string>
   <string name="waitingForOpponent">Venter på motstander</string>
+  <string name="orLetYourOpponentScanQrCode">Eller få motstanderen din til å skanne denne QR-koden</string>
   <string name="waiting">Venter</string>
   <string name="yourTurn">Ditt trekk</string>
   <string name="aiNameLevelAiLevel">%1$s på nivå %2$s</string>
@@ -417,6 +418,7 @@
   <string name="blackCheckmatesInOneMove">Svart setter matt i ett trekk</string>
   <string name="retry">Prøv igjen</string>
   <string name="reconnecting">Gjenoppretter forbindelsen</string>
+  <string name="noNetwork">Frakoblet</string>
   <plurals name="nbFriendsOnline">
     <item quantity="one">%s venn online</item>
     <item quantity="other">%s venner online</item>
@@ -703,6 +705,7 @@
   <string name="toggleVariationArrows">Skru variantpiler av eller på</string>
   <string name="cyclePreviousOrNextVariation">Endre til forrige/neste variant</string>
   <string name="toggleGlyphAnnotations">Skru symboler i kommentarer av eller på</string>
+  <string name="togglePositionAnnotations">Skru kommentarer for stillinger av eller på</string>
   <string name="variationArrowsInfo">Variantpiler lar deg navigere uten å bruke notasjonslisten.</string>
   <string name="playSelectedMove">spill valgt trekk</string>
   <string name="newTournament">Ny turnering</string>

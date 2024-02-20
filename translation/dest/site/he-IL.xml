@@ -5,6 +5,7 @@
   <string name="toInviteSomeoneToPlayGiveThisUrl">כדי להזמין מישהו לשחק, שתפו את הכתובת הזאת</string>
   <string name="gameOver">המשחק הסתיים</string>
   <string name="waitingForOpponent">ממתין ליריב</string>
+  <string name="orLetYourOpponentScanQrCode">אפשר גם לתת ליריבך לסרוק את קוד ה־QR הזה</string>
   <string name="waiting">ממתין</string>
   <string name="yourTurn">תורך</string>
   <string name="aiNameLevelAiLevel">%1$s רמה %2$s</string>
@@ -475,6 +476,7 @@
   <string name="blackCheckmatesInOneMove">מט ב-1 לשחור</string>
   <string name="retry">נסו שוב</string>
   <string name="reconnecting">מתחבר מחדש</string>
+  <string name="noNetwork">לא מחובר</string>
   <plurals name="nbFriendsOnline">
     <item quantity="one">חבר %s מחובר</item>
     <item quantity="two">%s חברים מחוברים</item>
@@ -777,6 +779,7 @@
   <string name="toggleVariationArrows">הפעלת חצי הווריאנטים</string>
   <string name="cyclePreviousOrNextVariation">מחזור הוריאנט הקודם/הבא</string>
   <string name="toggleGlyphAnnotations">הפעלת סמלי ההערות</string>
+  <string name="togglePositionAnnotations">הפעלת הערות עמדתיות</string>
   <string name="variationArrowsInfo">חצי הווריאנטים מאפשרים ניווט קל ללא צורך ברשימת המסעים.</string>
   <string name="playSelectedMove">שחקו את המהלך שנבחר</string>
   <string name="newTournament">טורניר חדש</string>

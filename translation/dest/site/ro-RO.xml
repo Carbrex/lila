@@ -5,6 +5,7 @@
   <string name="toInviteSomeoneToPlayGiveThisUrl">Pentru a invita pe cineva să joace, folosiți acest URL</string>
   <string name="gameOver">Partidă încheiată</string>
   <string name="waitingForOpponent">Se așteaptă adversarul</string>
+  <string name="orLetYourOpponentScanQrCode">Sau lăsați oponentul să scaneze acest cod QR</string>
   <string name="waiting">Se așteaptă</string>
   <string name="yourTurn">Rândul tău</string>
   <string name="aiNameLevelAiLevel">%1$s nivel %2$s</string>
@@ -432,6 +433,7 @@
   <string name="importGame">Importați partida</string>
   <string name="importGameExplanation">Copiați o partidă în format PGN pentru a putea apoi sa o rejucati, sa cereti o analiză a computerului, sa folositi functia de chat și sa obtineti un URL pentru distribuire.</string>
   <string name="importGameCaveat">Variațiile vor fi șterse. Pentru a le păstra, importați PGN-ul printr-un studiu.</string>
+  <string name="importGameDataPrivacyWarning">Acest PGN poate fi accesat public. Pentru a importa un joc în mod privat, folosește un studiu.</string>
   <plurals name="nbImportedGames">
     <item quantity="one">%s partidă importată</item>
     <item quantity="few">%s partide importate</item>
@@ -445,6 +447,7 @@
   <string name="blackCheckmatesInOneMove">Negrele să dea șah mat într-o mutare</string>
   <string name="retry">Mai încercați</string>
   <string name="reconnecting">Se reconectează</string>
+  <string name="noNetwork">Deconectat</string>
   <plurals name="nbFriendsOnline">
     <item quantity="one">%s prieten online</item>
     <item quantity="few">%s prieteni online</item>
@@ -538,6 +541,7 @@
   <string name="editProfile">Editează profilul</string>
   <string name="firstName">Prenume</string>
   <string name="lastName">Nume</string>
+  <string name="flair">Pictograma personalizată</string>
   <string name="biography">Biografie</string>
   <string name="countryRegion" comment="flag&#10;Appears when you edit your profile. Lets a player add a country/flag (not all flags are for countries) to their profile">Țara sau regiunea</string>
   <string name="thankYou">Mulţumesc!</string>
@@ -780,6 +784,7 @@
   <string name="withFriends">Cu prietenii</string>
   <string name="withEverybody">Cu toată lumea</string>
   <string name="kidMode">Mod pentru copii</string>
+  <string name="kidModeIsEnabled">Modul copil este activat.</string>
   <string name="kidModeExplanation">În modul „copil”, toate modalitățile de comunicare sunt dezactivate. Activează asta pentru copilul tău sau pentru școlari, pentru a-i proteja de alți utilizatori ai internetului.</string>
   <string name="inKidModeTheLichessLogoGetsIconX">În modul „copil”, sigla paginii va avea iconița %s, în felul acesta vei ști când copiii tăi sunt în siguranță.</string>
   <string name="askYourChessTeacherAboutLiftingKidMode">Contul tău este gestionat. Întreabă-ți profesorul de șah despre scoaterea modului copil.</string>
@@ -897,6 +902,8 @@
     <item quantity="few">și salvează %s variațiile cu mutare anticipată</item>
     <item quantity="other">și salvează %s variațiile cu mutare anticipată</item>
   </plurals>
+  <string name="showUnreadLichessMessage">Ați primit un mesaj privat de la Lichess.</string>
+  <string name="clickHereToReadIt">Click aici pentru a-l citi</string>
   <string name="sorry">Scuze :(</string>
   <string name="weHadToTimeYouOutForAWhile">Am fost nevoiți să suspendăm activitatea pentru puțin timp.</string>
   <string name="why">De ce?</string>
@@ -918,6 +925,7 @@
   <string name="agreementPolicy">Sunt de acord cu respectarea tuturor politicilor Lichess.</string>
   <string name="searchOrStartNewDiscussion">Caută sau începe o nouă conversație</string>
   <string name="edit">Modifică</string>
+  <string name="bullet" comment="Probably best left untranslated. Leave it as 'Bullet' unless your language has a better word for it.">Bullet</string>
   <string name="blitz" comment="Probably best left untranslated. Leave it as 'Blitz' unless your language has a better word for it.">Blitz</string>
   <string name="rapid">Rapid</string>
   <string name="classical">Clasic</string>

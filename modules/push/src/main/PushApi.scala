@@ -36,6 +36,8 @@ final private class PushApi(
         lightUser(mentioner).flatMap(luser => forumMention(to.head, luser.titleName, topic, postId))
       case StreamStart(streamerId, streamerName) =>
         streamStart(to, streamerId, streamerName)
+      case BroadcastRound(url, title, body) =>
+        broadcastRound(to, url, title, body)
       case InvitedToStudy(invitedBy, studyName, studyId) =>
         lightUser(invitedBy).flatMap(luser => invitedToStudy(to.head, luser.titleName, studyName, studyId))
       case _ => funit
@@ -47,32 +49,32 @@ final private class PushApi(
     else
       game.userIds.traverse_ { userId =>
         Pov(game, userId) so: pov =>
-          IfAway(pov):
-            maybePush(
-              userId,
-              _.finish,
-              NotificationPref.GameEvent,
-              data = LazyFu: () =>
-                for
-                  nbMyTurn <- gameRepo.countWhereUserTurn(userId)
-                  opponent <- asyncOpponentName(pov)
-                yield Data(
-                  title = pov.win match
-                    case Some(true)  => "You won!"
-                    case Some(false) => "You lost."
-                    case _           => "It's a draw."
-                  ,
-                  body = s"Your game with $opponent is over.",
-                  stacking = Stacking.GameFinish,
-                  urgency = Urgency.VeryLow,
-                  payload = payload(userId)(
-                    "type"   -> "gameFinish",
-                    "gameId" -> game.id.value,
-                    "fullId" -> pov.fullId.value
-                  ),
-                  iosBadge = nbMyTurn.some.filter(0 <)
-                )
+          val data = LazyFu: () =>
+            for
+              nbMyTurn <- gameRepo.countWhereUserTurn(userId)
+              opponent <- asyncOpponentName(pov)
+            yield Data(
+              title = pov.win match
+                case Some(true)  => "You won!"
+                case Some(false) => "You lost."
+                case _           => "It's a draw."
+              ,
+              body = s"Your game with $opponent is over.",
+              stacking = Stacking.GameFinish,
+              urgency = Urgency.VeryLow,
+              payload = payload(userId)(
+                "type"   -> "gameFinish",
+                "gameId" -> game.id.value,
+                "fullId" -> pov.fullId.value
+              ),
+              mobileCompatible = true,
+              iosBadge = nbMyTurn.some,
+              firebaseMod = offlineRoundNotif
             )
+          for
+            _ <- IfAway(pov)(maybePushNotif(userId, _.finish, NotificationPref.GameEvent, data))
+            _ <- alwaysPushFirebaseData(userId, _.finish, data)
+          yield ()
       }
 
   def move(move: MoveEvent): Funit =
@@ -80,24 +82,30 @@ final private class PushApi(
       proxyRepo.game(move.gameId) flatMap:
         _.filter(_.playable) so: game =>
           game.sans.lastOption.so: sanMove =>
-            val pov = Pov(game, game.player.color)
-            game.player.userId so: userId =>
-              val data = LazyFu: () =>
+            game.povs.traverse_ { pov =>
+              pov.player.userId so: userId =>
+                val data = LazyFu: () =>
+                  for
+                    _ <- proxyRepo flushIfPresent game.id // ensure game is updated before we count user games
+                    nbMyTurn <- gameRepo.countWhereUserTurn(userId)
+                    opponent <- asyncOpponentName(pov)
+                    payload  <- corresGamePayload(pov, "gameMove", userId)
+                  yield Data(
+                    title = "It's your turn!",
+                    body = s"$opponent played $sanMove",
+                    stacking = Stacking.GameMove,
+                    urgency = if pov.isMyTurn then Urgency.Normal else Urgency.Low,
+                    payload = payload,
+                    mobileCompatible = true,
+                    iosBadge = nbMyTurn.some,
+                    firebaseMod = offlineRoundNotif
+                  )
                 for
-                  nbMyTurn <- gameRepo.countWhereUserTurn(userId)
-                  opponent <- asyncOpponentName(pov)
-                  payload  <- corresGamePayload(pov, "gameMove", userId)
-                yield Data(
-                  title = "It's your turn!",
-                  body = s"$opponent played $sanMove",
-                  stacking = Stacking.GameMove,
-                  urgency = Urgency.Normal,
-                  payload = payload,
-                  iosBadge = nbMyTurn.some.filter(0 <),
-                  firebaseMod = offlineRoundNotif
-                )
-              IfAway(pov)(maybePush(userId, _.move, NotificationPref.GameEvent, data)) >>
-                alwaysPushFirebaseData(userId, _.move, data)
+                  _ <- pov.isMyTurn.so:
+                    IfAway(pov)(maybePushNotif(userId, _.move, NotificationPref.GameEvent, data))
+                  _ <- alwaysPushFirebaseData(userId, _.move, data)
+                yield ()
+            }
 
   def takebackOffer(gameId: GameId): Funit =
     LilaFuture.delay(1 seconds):
@@ -117,9 +125,10 @@ final private class PushApi(
                   stacking = Stacking.GameTakebackOffer,
                   urgency = Urgency.Normal,
                   payload = payload,
+                  mobileCompatible = true,
                   firebaseMod = offlineRoundNotif
                 )
-              IfAway(pov)(maybePush(userId, _.takeback, NotificationPref.GameEvent, data)) >>
+              IfAway(pov)(maybePushNotif(userId, _.takeback, NotificationPref.GameEvent, data)) >>
                 alwaysPushFirebaseData(userId, _.takeback, data)
           }
 
@@ -141,9 +150,10 @@ final private class PushApi(
                   stacking = Stacking.GameDrawOffer,
                   urgency = Urgency.Normal,
                   payload = payload,
-                  firebaseMod = offlineRoundNotif
+                  firebaseMod = offlineRoundNotif,
+                  mobileCompatible = true
                 )
-              IfAway(pov)(maybePush(userId, _.draw, NotificationPref.GameEvent, data)) >>
+              IfAway(pov)(maybePushNotif(userId, _.draw, NotificationPref.GameEvent, data)) >>
                 alwaysPushFirebaseData(userId, _.draw, data)
           }
 
@@ -159,9 +169,10 @@ final private class PushApi(
           stacking = Stacking.GameMove,
           urgency = Urgency.High,
           payload = payload,
+          mobileCompatible = true,
           firebaseMod = offlineRoundNotif
         )
-      maybePush(userId, _.corresAlarm, NotificationPref.GameEvent, data) >>
+      maybePushNotif(userId, _.corresAlarm, NotificationPref.GameEvent, data) >>
         alwaysPushFirebaseData(userId, _.corresAlarm, data)
 
   private def corresGamePayload(pov: Pov, typ: String, userId: UserId): Fu[Data.Payload] =
@@ -176,7 +187,7 @@ final private class PushApi(
         )
 
   def privateMessage(to: NotifyAllows, senderId: UserId, senderName: String, text: String): Funit =
-    filterPush(
+    filterPushNotif(
       to,
       _.message,
       LazyFu.sync:
@@ -185,6 +196,7 @@ final private class PushApi(
           body = text,
           stacking = Stacking.PrivateMessage,
           urgency = Urgency.Normal,
+          mobileCompatible = false,
           payload = payload(to.userId)(
             "type"     -> "newMessage",
             "threadId" -> senderId.value
@@ -193,7 +205,7 @@ final private class PushApi(
     )
 
   def invitedToStudy(to: NotifyAllows, invitedBy: String, studyName: StudyName, studyId: StudyId): Funit =
-    filterPush(
+    filterPushNotif(
       to,
       _.message,
       LazyFu.sync:
@@ -202,6 +214,7 @@ final private class PushApi(
           body = s"$invitedBy invited you to $studyName",
           stacking = Stacking.InvitedStudy,
           urgency = Urgency.Normal,
+          mobileCompatible = false,
           payload = payload(to.userId)(
             "type"      -> "invitedStudy",
             "invitedBy" -> invitedBy,
@@ -216,7 +229,7 @@ final private class PushApi(
     c.destUser.so: dest =>
       c.challengerUser.ifFalse(c.hasClock) so: challenger =>
         lightUser(challenger.id) flatMap: lightChallenger =>
-          maybePush(
+          maybePushNotif(
             dest.id,
             _.challenge.create,
             NotificationPref.Challenge,
@@ -229,14 +242,15 @@ final private class PushApi(
                 payload = payload(dest.id)(
                   "type"        -> "challengeCreate",
                   "challengeId" -> c.id.value
-                )
+                ),
+                mobileCompatible = false
               )
           )
 
   def challengeAccept(c: Challenge, joinerId: Option[UserId]): Funit =
     c.challengerUser.ifTrue(c.finalColor.white && !c.hasClock) so: challenger =>
       joinerId so lightUser.optional flatMap: lightJoiner =>
-        maybePush(
+        maybePushNotif(
           challenger.id,
           _.challenge.accept,
           NotificationPref.Challenge,
@@ -246,6 +260,7 @@ final private class PushApi(
               body = describeChallenge(c),
               stacking = Stacking.ChallengeAccept,
               urgency = Urgency.Normal,
+              mobileCompatible = false,
               payload = payload(challenger.id)(
                 "type"        -> "challengeAccept",
                 "challengeId" -> c.id.value
@@ -255,7 +270,7 @@ final private class PushApi(
 
   def tourSoon(tour: TourSoon): Funit =
     tour.userIds.toList.traverse_ : userId =>
-      maybePush(
+      maybePushNotif(
         userId,
         _.tourSoon,
         NotificationPref.TournamentSoon,
@@ -265,6 +280,7 @@ final private class PushApi(
             body = "The tournament is about to start!",
             stacking = Stacking.ChallengeAccept,
             urgency = Urgency.Normal,
+            mobileCompatible = false,
             payload = payload(userId)(
               "type"     -> "tourSoon",
               "tourId"   -> tour.tourId,
@@ -275,7 +291,7 @@ final private class PushApi(
       )
 
   def forumMention(to: NotifyAllows, mentionedBy: String, topicName: String, postId: ForumPostId): Funit =
-    filterPush(
+    filterPushNotif(
       to,
       _.forumMention,
       LazyFu: () =>
@@ -285,6 +301,7 @@ final private class PushApi(
             body = post.fold(topicName)(p => shorten(p.text, 57 - 3, "...")),
             stacking = Stacking.ForumMention,
             urgency = Urgency.Low,
+            mobileCompatible = false,
             payload = payload(to.userId)(
               "type"        -> "forumMention",
               "mentionedBy" -> mentionedBy,
@@ -306,7 +323,8 @@ final private class PushApi(
           "type"       -> "streamStart",
           "streamerId" -> streamerId.value,
           "url"        -> s"https://lichess.org/streamer/$streamerId/redirect"
-        )
+        ),
+        mobileCompatible = false
       )
     val webRecips = recips.collect { case u if u.allows.web => u.userId }
     webPush(webRecips, pushData).addEffects { res =>
@@ -318,16 +336,39 @@ final private class PushApi(
 
   private type MonitorType = lila.mon.push.send.type => ((String, Boolean, Int) => Unit)
 
-  private def maybePush(
+  private def broadcastRound(
+      recips: Iterable[NotifyAllows],
+      url: String,
+      title: String,
+      body: String
+  ): Funit =
+    val pushData = LazyFu.sync:
+      Data(
+        title = title,
+        body = body,
+        stacking = Stacking.Generic,
+        urgency = Urgency.Normal,
+        payload = payload("url" -> url),
+        mobileCompatible = false
+      )
+    val webRecips = recips.collect { case u if u.allows.web => u.userId }
+    webPush(webRecips, pushData).addEffects { res =>
+      lila.mon.push.send.broadcastRound("web", res.isSuccess, webRecips.size)
+    } andDo:
+      recips collect { case u if u.allows.device => u.userId } foreach:
+        firebasePush(_, pushData).addEffects: res =>
+          lila.mon.push.send.broadcastRound("firebase", res.isSuccess, 1)
+
+  private def maybePushNotif(
       userId: UserId,
       monitor: MonitorType,
       event: NotificationPref.Event,
       data: LazyFu[Data]
   ): Funit =
     notifyAllows(userId, event).flatMap: allows =>
-      filterPush(NotifyAllows(userId, allows), monitor, data)
+      filterPushNotif(NotifyAllows(userId, allows), monitor, data)
 
-  private def filterPush(to: NotifyAllows, monitor: MonitorType, data: LazyFu[Data]): Funit = for
+  private def filterPushNotif(to: NotifyAllows, monitor: MonitorType, data: LazyFu[Data]): Funit = for
     _ <- to.allows.web so webPush(to.userId, data).addEffects: res =>
       monitor(lila.mon.push.send)("web", res.isSuccess, 1)
     _ <- to.allows.device so firebasePush(to.userId, data).addEffects: res =>
@@ -337,7 +378,7 @@ final private class PushApi(
   // ignores notification preferences
   private def alwaysPushFirebaseData(userId: UserId, monitor: MonitorType, data: LazyFu[Data]): Funit =
     firebasePush(userId, data.dmap(_.copy(firebaseMod = Data.FirebaseMod.DataOnly.some))).addEffects: res =>
-      monitor(lila.mon.push.send)("firebase", res.isSuccess, 1)
+      monitor(lila.mon.push.send)("firebaseData", res.isSuccess, 1)
 
   private def describeChallenge(c: Challenge) =
     import lila.challenge.Challenge.TimeControl.*
@@ -369,6 +410,7 @@ private object PushApi:
       stacking: Stacking,
       urgency: Urgency,
       payload: Data.Payload,
+      mobileCompatible: Boolean,
       iosBadge: Option[Int] = None,
       // https://firebase.google.com/docs/cloud-messaging/concept-options#data_messages
       firebaseMod: Option[Data.FirebaseMod] = None

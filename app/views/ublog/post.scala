@@ -45,7 +45,7 @@ object post:
       csp = defaultCsp.withTwitter.withInlineIconFont.some
     ):
       main(cls := "page-menu page-small")(
-        views.html.blog.bits.menu(none, (if ctx is user then "mine" else "community").some),
+        menu(Left(user.id)),
         div(cls := "page-menu__content box box-pad ublog-post")(
           post.image.map: image =>
             frag(
@@ -100,12 +100,17 @@ object post:
                 dataIcon := licon.CautionTriangle
               )
           ),
+          !ctx.is(user) && isGranted(_.ModerateBlog) option rankAdjust(blog, post),
           div(cls := "ublog-post__topics")(
             post.topics.map: topic =>
               a(href := routes.Ublog.topic(topic.url, 1))(topic.value)
           ),
           strong(cls := "ublog-post__intro")(post.intro),
           div(cls := "ublog-post__markup expand-text")(markup),
+          post.isLichess option div(cls := "ublog-post__lichess")(
+            views.html.base.bits.connectLinks,
+            p(a(href := routes.Plan.index)(trans.lichessPatronInfo()))
+          ),
           div(cls := "ublog-post__footer")(
             post.live && ~post.discuss option a(
               href     := routes.Ublog.discuss(post.id),
@@ -121,6 +126,29 @@ object post:
             others.size > 0 option div(cls := "ublog-post-cards")(others map { card(_) })
           )
         )
+      )
+
+  private def rankAdjust(blog: UblogBlog, post: UblogPost)(using PageContext) =
+    env.ublog.rank.computeRank(blog, post) map: rank =>
+      postForm(cls := "ublog-post__meta", action := routes.Ublog.rankAdjust(post.id))(
+        "Rank date:",
+        span(cls := "ublog-post__meta__date")(semanticDate(rank.value)),
+        s"adjust${post.rankAdjustDays.nonEmpty so "ed"} by",
+        span(
+          input(
+            tpe         := "number",
+            name        := "days",
+            min         := -180,
+            max         := 180,
+            placeholder := "Days",
+            value       := post.rankAdjustDays.so(_.toString)
+          )
+        ),
+        span(
+          input(tpe := "checkbox", name := "pinned", value := "true", if ~post.pinned then checked else none),
+          label(`for` := "pinned")(" Pin to top")
+        ),
+        form3.submit("Submit")(cls := "button-empty")
       )
 
   private def editButton(post: UblogPost)(using PageContext) = a(
@@ -179,7 +207,7 @@ object post:
       showIntro: Boolean = true
   )(using Context) =
     a(cls := "ublog-post-card ublog-post-card--link", href := makeUrl(post))(
-      div(style := "position: relative")(
+      span(cls := "ublog-post-card__top")(
         thumbnail(post, _.Size.Small)(cls := "ublog-post-card__image"),
         post.lived map { live => semanticDate(live.at)(cls := "ublog-post-card__over-image") },
         showAuthor match
@@ -205,9 +233,9 @@ object post:
 
   def editUrlOfPost(post: UblogPost.BasePost) = routes.Ublog.edit(post.id)
 
-  private[ublog] def newPostLink(using ctx: Context) = ctx.me.map: u =>
+  private[ublog] def newPostLink(user: User)(using Context) =
     a(
-      href     := routes.Ublog.form(u.username),
+      href     := routes.Ublog.form(user.username),
       cls      := "button button-green",
       dataIcon := licon.PlusButton,
       title    := trans.ublog.newPost.txt()

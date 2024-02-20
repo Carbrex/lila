@@ -1,29 +1,36 @@
 import debounce from 'common/debounce';
 import * as licon from 'common/licon';
-import { renderClock, fenColor } from 'common/mini-board';
-import { bind, MaybeVNodes } from 'common/snabbdom';
+import { renderClock, fenColor } from 'common/miniBoard';
+import { bind, MaybeVNodes, looseH as h } from 'common/snabbdom';
 import { spinnerVdom as spinner } from 'common/spinner';
-import { h, VNode } from 'snabbdom';
+import { VNode } from 'snabbdom';
 import { multiBoard as xhrLoad } from './studyXhr';
 import { opposite as CgOpposite } from 'chessground/util';
 import { opposite as oppositeColor } from 'chessops/util';
 import { ChapterPreview, ChapterPreviewPlayer, Position, StudyChapterMeta } from './interfaces';
 import StudyCtrl from './studyCtrl';
+import { GetCloudEval, MultiCloudEval, renderEvalToggle, renderScore } from './multiCloudEval';
 
 export class MultiBoardCtrl {
   loading = false;
   page = 1;
   pager?: Paginator<ChapterPreview>;
   playing = false;
+  multiCloudEval: MultiCloudEval;
 
   constructor(
     readonly studyId: string,
     readonly redraw: () => void,
     readonly trans: Trans,
-  ) {}
+    send: SocketSend,
+    variant: () => VariantKey,
+  ) {
+    const currentFens = () => this.pager?.currentPageResults.map(c => c.fen) || [];
+    this.multiCloudEval = new MultiCloudEval(redraw, send, variant, currentFens);
+  }
 
   addNode = (pos: Position, node: Tree.Node) => {
-    const cp = this.pager && this.pager.currentPageResults.find(cp => cp.id == pos.chapterId);
+    const cp = this.pager?.currentPageResults.find(cp => cp.id == pos.chapterId);
     if (cp?.playing) {
       cp.fen = node.fen;
       cp.lastMove = node.uci;
@@ -32,6 +39,7 @@ export class MultiBoardCtrl {
       // at this point `(cp: ChapterPreview).lastMoveAt` becomes outdated but should be ok since not in use anymore
       // to mitigate bad usage, setting it as `undefined`
       cp.lastMoveAt = undefined;
+      this.multiCloudEval.sendRequest();
       this.redraw();
     }
   };
@@ -49,20 +57,19 @@ export class MultiBoardCtrl {
     if (changed) this.redraw();
   };
 
-  reload = (onInsert?: boolean) => {
+  reload = async (onInsert?: boolean) => {
     if (this.pager && !onInsert) {
       this.loading = true;
       this.redraw();
     }
-    xhrLoad(this.studyId, this.page, this.playing).then(p => {
-      this.pager = p;
-      if (p.nbPages < this.page) {
-        if (!p.nbPages) this.page = 1;
-        else this.setPage(p.nbPages);
-      }
-      this.loading = false;
-      this.redraw();
-    });
+    this.pager = await xhrLoad(this.studyId, this.page, this.playing);
+    if (this.pager.nbPages < this.page) {
+      if (!this.pager.nbPages) this.page = 1;
+      else this.setPage(this.pager.nbPages);
+    }
+    this.loading = false;
+    this.redraw();
+    this.multiCloudEval.sendRequest();
   };
 
   reloadEventually = debounce(this.reload, 1000);
@@ -93,7 +100,7 @@ export function view(ctrl: MultiBoardCtrl, study: StudyCtrl): VNode | undefined 
   return h(
     'div.study__multiboard',
     {
-      class: { loading: ctrl.loading, nopager: !ctrl.pager },
+      class: { loading: ctrl.loading, nodata: !ctrl.pager },
       hook: {
         insert(vnode: VNode) {
           ctrl.reload(true);
@@ -111,27 +118,33 @@ export function view(ctrl: MultiBoardCtrl, study: StudyCtrl): VNode | undefined 
 
 function renderPager(pager: Paginator<ChapterPreview>, study: StudyCtrl): MaybeVNodes {
   const ctrl = study.multiBoard;
+  const cloudEval = ctrl.multiCloudEval.showEval() ? ctrl.multiCloudEval.getCloudEval : undefined;
   return [
-    h('div.top', [renderPagerNav(pager, ctrl), renderPlayingToggle(ctrl)]),
-    h('div.now-playing', pager.currentPageResults.map(makePreview(study))),
+    h('div.study__multiboard__top', [
+      renderPagerNav(pager, ctrl),
+      h('div.study__multiboard__options', [
+        h('label.eval', [renderEvalToggle(ctrl.multiCloudEval), ctrl.trans.noarg('showEvalBar')]),
+        renderPlayingToggle(ctrl),
+      ]),
+    ]),
+    h('div.now-playing', pager.currentPageResults.map(makePreview(study, cloudEval))),
   ];
 }
 
-function renderPlayingToggle(ctrl: MultiBoardCtrl): VNode {
-  return h('label.playing', [
+const renderPlayingToggle = (ctrl: MultiBoardCtrl): VNode =>
+  h('label.playing', [
     h('input', {
       attrs: { type: 'checkbox', checked: ctrl.playing },
       hook: bind('change', e => ctrl.setPlaying((e.target as HTMLInputElement).checked)),
     }),
     ctrl.trans.noarg('playing'),
   ]);
-}
 
 function renderPagerNav(pager: Paginator<ChapterPreview>, ctrl: MultiBoardCtrl): VNode {
   const page = ctrl.page,
     from = Math.min(pager.nbResults, (page - 1) * pager.maxPerPage + 1),
     to = Math.min(pager.nbResults, page * pager.maxPerPage);
-  return h('div.pager', [
+  return h('div.study__multiboard__pager', [
     pagerButton(ctrl.trans.noarg('first'), licon.JumpFirst, () => ctrl.setPage(1), page > 1, ctrl),
     pagerButton(ctrl.trans.noarg('previous'), licon.JumpPrev, ctrl.prevPage, page > 1, ctrl),
     h('span.page', `${from}-${to} / ${pager.nbResults}`),
@@ -139,7 +152,7 @@ function renderPagerNav(pager: Paginator<ChapterPreview>, ctrl: MultiBoardCtrl):
     pagerButton(ctrl.trans.noarg('last'), licon.JumpLast, ctrl.lastPage, page < pager.nbPages, ctrl),
     h('button.fbt', {
       attrs: { 'data-icon': licon.Search, title: 'Search' },
-      hook: bind('click', () => lichess.pubsub.emit('study.search.open')),
+      hook: bind('click', () => site.pubsub.emit('study.search.open')),
     }),
   ]);
 }
@@ -157,7 +170,7 @@ function pagerButton(
   });
 }
 
-const makePreview = (study: StudyCtrl) => (preview: ChapterPreview) =>
+const makePreview = (study: StudyCtrl, cloudEval?: GetCloudEval) => (preview: ChapterPreview) =>
   h(
     `a.mini-game.mini-game-${preview.id}.mini-game--init.is2d`,
     {
@@ -168,19 +181,19 @@ const makePreview = (study: StudyCtrl) => (preview: ChapterPreview) =>
       hook: {
         insert(vnode) {
           const el = vnode.elm as HTMLElement;
-          lichess.miniGame.init(el);
+          site.miniGame.init(el);
           vnode.data!.fen = preview.fen;
           el.addEventListener('mousedown', _ => study.setChapter(preview.id));
         },
         postpatch(old, vnode) {
           if (old.data!.fen !== preview.fen) {
             if (preview.outcome) {
-              lichess.miniGame.finish(
+              site.miniGame.finish(
                 vnode.elm as HTMLElement,
                 preview.outcome === '1-0' ? 'white' : preview.outcome === '0-1' ? 'black' : undefined,
               );
             } else {
-              lichess.miniGame.update(vnode.elm as HTMLElement, {
+              site.miniGame.update(vnode.elm as HTMLElement, {
                 lm: preview.lastMove!,
                 fen: preview.fen,
                 wc: computeTimeLeft(preview, 'white'),
@@ -194,10 +207,36 @@ const makePreview = (study: StudyCtrl) => (preview: ChapterPreview) =>
     },
     [
       boardPlayer(preview, CgOpposite(preview.orientation)),
-      h('span.cg-wrap'),
+      h('span.cg-gauge', [
+        h('span.mini-game__board', h('span.cg-wrap')),
+        cloudEval && evalGauge(preview, cloudEval),
+      ]),
       boardPlayer(preview, preview.orientation),
     ],
   );
+
+const evalGauge = (chap: ChapterPreview, cloudEval: GetCloudEval): VNode =>
+  h('span.mini-game__gauge', [
+    h('span.mini-game__gauge__black', {
+      hook: {
+        postpatch(old, vnode) {
+          const prevNodeCloud = old.data?.cloud;
+          const cev = cloudEval(chap.fen) || prevNodeCloud;
+          if (cev?.chances != prevNodeCloud?.chances) {
+            const elm = vnode.elm as HTMLElement;
+            const gauge = elm.parentNode as HTMLElement;
+            elm.style.height = `${((1 - (cev?.chances || 0)) / 2) * 100}%`;
+            if (cev) {
+              gauge.title = `${renderScore(cev)} at depth ${cev.depth}`;
+              gauge.classList.add('mini-game__gauge--set');
+            }
+          }
+          vnode.data!.cloud = cev;
+        },
+      },
+    }),
+    h('tick'),
+  ]);
 
 const userName = (u: ChapterPreviewPlayer) =>
   u.title ? [h('span.utitle', u.title), ' ' + u.name] : [u.name];

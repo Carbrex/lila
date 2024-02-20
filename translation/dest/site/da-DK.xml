@@ -5,6 +5,7 @@
   <string name="toInviteSomeoneToPlayGiveThisUrl">Invitér en til at spille ved at oplyse denne URL</string>
   <string name="gameOver">Spillet er slut</string>
   <string name="waitingForOpponent">Venter på modstander</string>
+  <string name="orLetYourOpponentScanQrCode">Eller lad din modstander scanne denne QR-kode</string>
   <string name="waiting">Venter</string>
   <string name="yourTurn">Din tur</string>
   <string name="aiNameLevelAiLevel">%1$s niveau %2$s</string>
@@ -417,6 +418,7 @@
   <string name="blackCheckmatesInOneMove">Sort sætter mat i ét træk</string>
   <string name="retry">Prøv igen</string>
   <string name="reconnecting">Genopretter forbindelsen</string>
+  <string name="noNetwork">Offline</string>
   <plurals name="nbFriendsOnline">
     <item quantity="one">%s ven online</item>
     <item quantity="other">%s venner online</item>
@@ -528,7 +530,7 @@
   </plurals>
   <string name="automaticallyProceedToNextGameAfterMoving">Automatisk videre til næste spil efter træk</string>
   <string name="autoSwitch">Autoskift</string>
-  <string name="puzzles">Puslespil</string>
+  <string name="puzzles">Taktikopgaver</string>
   <string name="tournamentWinners">Turneringsvindere</string>
   <string name="name">Navn</string>
   <string name="description">Beskrivelse</string>
@@ -702,7 +704,8 @@
   <string name="keyNextBranch">Næste gren</string>
   <string name="toggleVariationArrows">Slå variantpile til/fra</string>
   <string name="cyclePreviousOrNextVariation">Gennemgå forrige/næste variant</string>
-  <string name="toggleGlyphAnnotations">Slå glyf-annotationer til/fra</string>
+  <string name="toggleGlyphAnnotations">Slå træk-annotationer til/fra</string>
+  <string name="togglePositionAnnotations">Slå positionsannotationer til/fra</string>
   <string name="variationArrowsInfo">Variantpile lader dig navigere uden at bruge træklisten.</string>
   <string name="playSelectedMove">spil valgte træk</string>
   <string name="newTournament">Ny turnering</string>

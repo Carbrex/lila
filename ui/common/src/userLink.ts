@@ -38,11 +38,11 @@ export const userLink = (u: AnyUser): VNode =>
       class: { 'user-link': true, ulpt: u.name != 'ghost', online: !!u.online },
       attrs: { href: `/@/${u.name}`, ...u.attrs },
     },
-    [userLine(u), ...fullName(u), userRating(u)],
+    [userLine(u), ...fullName(u), u.rating && ` ${userRating(u)} `],
   );
 
 export const userFlair = (u: HasFlair): VNode | undefined =>
-  u.flair ? h('img.uflair', { attrs: { src: lichess.asset.flairSrc(u.flair) } }) : undefined;
+  u.flair ? h('img.uflair', { attrs: { src: site.asset.flairSrc(u.flair) } }) : undefined;
 
 export const userLine = (u: HasLine): VNode | undefined =>
   u.line !== false

@@ -211,10 +211,7 @@ object BSONHandlers:
       F.score          -> n.eval.flatMap(_.score), // BC stored as score (maybe its better to keep this way?)
       F.clock          -> n.clock,
       F.crazy          -> n.crazyData,
-      F.forceVariation -> w.boolO(n.forceVariation),
-      F.order -> {
-        (n.children.nodes.sizeIs > 1) option n.children.nodes.map(_.id)
-      }
+      F.forceVariation -> w.boolO(n.forceVariation)
     )
 
   private[study] def writeNewBranch(n: NewBranch, order: Option[List[UciCharPair]]) =
@@ -233,8 +230,7 @@ object BSONHandlers:
       F.score    -> n.metas.eval.flatMap(_.score), // BC stored as score (maybe its better to keep this way?)
       F.clock    -> n.metas.clock,
       F.crazy    -> n.metas.crazyData,
-      F.forceVariation -> w.boolO(n.forceVariation),
-      F.order          -> order
+      F.forceVariation -> w.boolO(n.forceVariation)
     )
 
   private[study] given BSON[Root] with
@@ -339,7 +335,7 @@ object BSONHandlers:
   private[study] given (using handler: BSONHandler[Map[String, DbMember]]): BSONHandler[StudyMembers] =
     handler.as[StudyMembers](
       members =>
-        StudyMembers(members map { case (id, dbMember) =>
+        StudyMembers(members map { (id, dbMember) =>
           UserId(id) -> StudyMember(UserId(id), dbMember.role)
         }),
       _.members.view.map((id, m) => id.value -> DbMember(m.role)).toMap
@@ -403,12 +399,10 @@ object BSONHandlers:
       id    <- doc.getAsTry[StudyChapterId]("_id")
       name  <- doc.getAsTry[StudyChapterName]("name")
       setup <- doc.getAsTry[Chapter.Setup]("setup")
-      outcome = doc
-        .getAsOpt[List[String]]("tags")
-        .flatMap {
-          _.headOption // because only the Result: tag is fetched by metadataProjection
-            .map(_ drop 7)
-            .map(Outcome.fromResult)
-        }
+      tags    = ~doc.getAsOpt[List[String]]("tags")
+      outcome = tags.find(_.startsWith("Result:")).map(_ drop 7).map(Outcome.fromResult)
+      teams =
+        tags.find(_.startsWith("WhiteTeam:")).map(_ drop 10) zip
+          tags.find(_.startsWith("BlackTeam:")).map(_ drop 10)
       hasRelayPath = doc.getAsOpt[Bdoc]("relay").flatMap(_ string "path").exists(_.nonEmpty)
-    yield Chapter.Metadata(id, name, setup, outcome, hasRelayPath)
+    yield Chapter.Metadata(id, name, setup, outcome, teams, hasRelayPath)

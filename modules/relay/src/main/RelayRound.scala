@@ -19,7 +19,8 @@ case class RelayRound(
     /* at least it *looks* finished... but maybe it's not
      * sync.nextAt is used for actually synchronising */
     finished: Boolean,
-    createdAt: Instant
+    createdAt: Instant,
+    crowd: Option[Int]
 ):
 
   inline def id = _id
@@ -103,7 +104,8 @@ object RelayRound:
     def addLog(event: SyncLog.Event) = copy(log = log add event)
     def clearLog                     = copy(log = SyncLog.empty)
 
-    def hasDelay = delay.exists(_.value > 0)
+    def hasDelay      = delay.exists(_.value > 0)
+    def nonEmptyDelay = delay.filter(_.value > 0)
 
     override def toString = upstream.toString
 
@@ -115,10 +117,10 @@ object RelayRound:
       def local = asUrl.fold(true)(_.isLocal)
     case class UpstreamUrl(url: String) extends Upstream:
       def isLocal = url.contains("://127.0.0.1") || url.contains("://[::1]") || url.contains("://localhost")
-      def withRound =
-        url.split(" ", 2) match
-          case Array(u, round) => UpstreamUrl.WithRound(u, round.toIntOption)
-          case _               => UpstreamUrl.WithRound(url, none)
+      def withRound = url.split(" ", 2) match
+        case Array(u, round) => UpstreamUrl.WithRound(u, round.toIntOption)
+        case _               => UpstreamUrl.WithRound(url, none)
+      def isLcc: Boolean = UpstreamUrl.LccRegex.matches(url)
     object UpstreamUrl:
       case class WithRound(url: String, round: Option[Int])
       val LccRegex = """.*view\.livechesscloud\.com/#?([0-9a-f\-]+)""".r
@@ -132,6 +134,7 @@ object RelayRound:
     def path: String =
       s"/broadcast/${tour.slug}/${if link.slug == tour.slug then "-" else link.slug}/${link.id}"
     def path(chapterId: StudyChapterId): String = s"$path/$chapterId"
+    def crowd                                   = display.crowd orElse link.crowd
 
   case class WithTour(round: RelayRound, tour: RelayTour) extends AndTour:
     def display                 = round
@@ -142,3 +145,5 @@ object RelayRound:
     def withTour = WithTour(relay, tour)
     def path     = withTour.path
     def fullName = withTour.fullName
+
+  case class WithStudy(relay: RelayRound, study: Study)
