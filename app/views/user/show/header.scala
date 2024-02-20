@@ -14,61 +14,6 @@ object header:
   private val dataToints = attr("data-toints")
   private val dataTab    = attr("data-tab")
 
-  private def generateUserActions(deviceCanHover: Boolean, u: User, social: UserInfo.Social)(using ctx: Context) =
-    div(cls := (if deviceCanHover then "user-actions btn-rack" else "dropdown-window"))(
-      (ctx is u) option frag(
-        a(
-          cls := (if deviceCanHover then "btn-rack__btn" else "text"),
-          href := routes.Account.profile,
-          titleOrText(trans.editProfile.txt()),
-          dataIcon := licon.Gear
-        )(if deviceCanHover then "" else trans.editProfile.txt()),
-        a(
-          cls := (if deviceCanHover then "btn-rack__btn" else "text"),
-          href := routes.Relation.blocks(),
-          titleOrText(trans.listBlockedPlayers.txt()),
-          dataIcon := licon.NotAllowed
-        )(if deviceCanHover then "" else trans.listBlockedPlayers.txt()),
-      ),
-      isGranted(_.UserModView) option
-        a(
-          cls := (if deviceCanHover then "btn-rack__btn mod-zone-toggle" else "text"),
-          href := routes.User.mod(u.username),
-          titleOrText("Mod zone (Hotkey: m)"),
-          dataIcon := licon.Agent
-        )(if deviceCanHover then "" else "Mod zone (Hotkey: m)"),
-      a(
-        cls := (if deviceCanHover then "btn-rack__btn" else "text"),
-        href := routes.User.tv(u.username),
-        titleOrText(trans.watchGames.txt()),
-        dataIcon := licon.AnalogTv
-      )(if deviceCanHover then "" else trans.watchGames.txt()),
-      !ctx.is(u) option views.html.relation.actions(
-        u.light,
-        relation = social.relation,
-        followable = social.followable,
-        blocked = social.blocked
-      ),
-      a(
-        cls := (if deviceCanHover then "btn-rack__btn" else "text"),
-        href := s"${routes.UserAnalysis.index}#explorer/${u.username}",
-        titleOrText(trans.openingExplorer.txt()),
-        dataIcon := licon.Book
-      )(if deviceCanHover then "" else trans.openingExplorer.txt()),
-      a(
-        cls := (if deviceCanHover then "btn-rack__btn" else "text"),
-        href := routes.User.download(u.username),
-        titleOrText(trans.exportGames.txt()),
-        dataIcon := licon.Download
-      )(if deviceCanHover then "" else trans.exportGames.txt()),
-      (ctx.isAuth && ctx.kid.no && !ctx.is(u)) option a(
-        titleOrText(trans.reportXToModerators.txt(u.username)),
-        cls := (if deviceCanHover then "btn-rack__btn" else "text"),
-        href := s"${reportRoutes.form}?username=${u.username}",
-        dataIcon := licon.CautionTriangle
-      )(if deviceCanHover then "" else trans.reportXToModerators.txt(u.username))
-    )
-
   def apply(u: User, info: UserInfo, angle: UserInfo.Angle, social: UserInfo.Social)(using ctx: Context) =
     val userDom =
       span(
@@ -146,15 +91,74 @@ object header:
           (ctx.isAuth && !ctx.is(u)) option
             a(cls := "nm-item note-zone-toggle")(splitNumber(s"${social.notes.size} Notes"))
         ),
-        generateUserActions(true, u, social),
-        div(cls := "user-actions dropdown")(
+        div(cls := "dropdown")(
           a(
-            cls := "text",
+            cls := "dropdown__toggle",
             titleOrText(trans.list.txt()),
             dataIcon := licon.List
           ),
-          generateUserActions(false, u, social)
-        ),
+          div(cls := ("user-actions btn-rack dropdown-window"))(
+            (ctx is u) option frag(
+              a(
+                cls  := ("btn-rack__btn"),
+                href := routes.Account.profile,
+                titleOrText(trans.editProfile.txt()),
+                dataIcon := licon.Gear
+              )(
+                (
+                  span(cls := "dropdown__text")(trans.editProfile.txt())
+                )
+              ),
+              a(
+                cls  := ("btn-rack__btn"),
+                href := routes.Relation.blocks(),
+                titleOrText(trans.listBlockedPlayers.txt()),
+                dataIcon := licon.NotAllowed
+              )(
+                (
+                  span(cls := "dropdown__text")(trans.listBlockedPlayers.txt())
+                )
+              ),
+              isGranted(_.UserModView) option
+                a(
+                  cls  := ("btn-rack__btn mod-zone-toggle text"),
+                  href := routes.User.mod(u.username),
+                  titleOrText("Mod zone (Hotkey: m)"),
+                  dataIcon := licon.Agent
+                )(span(cls := "dropdown__text")("Mod zone (Hotkey: m)"))
+            ),
+            a(
+              cls  := ("btn-rack__btn"),
+              href := routes.User.tv(u.username),
+              titleOrText(trans.watchGames.txt()),
+              dataIcon := licon.AnalogTv
+            )(span(cls := "dropdown__text")(trans.watchGames.txt())),
+            !ctx.is(u) option views.html.relation.actions(
+              u.light,
+              relation = social.relation,
+              followable = social.followable,
+              blocked = social.blocked
+            ),
+            a(
+              cls  := ("btn-rack__btn"),
+              href := s"${routes.UserAnalysis.index}#explorer/${u.username}",
+              titleOrText(trans.openingExplorer.txt()),
+              dataIcon := licon.Book
+            )(span(cls := "dropdown__text")(trans.openingExplorer.txt())),
+            a(
+              cls  := ("btn-rack__btn"),
+              href := routes.User.download(u.username),
+              titleOrText(trans.exportGames.txt()),
+              dataIcon := licon.Download
+            )(span(cls := "dropdown__text")(trans.exportGames.txt())),
+            (ctx.isAuth && ctx.kid.no && !ctx.is(u)) option a(
+              titleOrText(trans.reportXToModerators.txt(u.username)),
+              cls      := ("btn-rack__btn"),
+              href     := s"${reportRoutes.form}?username=${u.username}",
+              dataIcon := licon.CautionTriangle
+            )(span(cls := "dropdown__text")(trans.reportXToModerators.txt(u.username))),
+          )
+        )
       ),
       !ctx.is(u) option noteZone(u, social.notes),
       isGranted(_.UserModView) option div(cls := "mod-zone mod-zone-full none"),

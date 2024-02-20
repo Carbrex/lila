@@ -32,54 +32,66 @@
 
     .user-actions {
       margin: 1em;
-    }
 
-    .btn-rack {
-      display: none;
-      @media (hover: hover) {
-        display: inherit;
-      }
-      a {
+      form {
         display: inline;
       }
     }
 
     .dropdown {
       @media (hover: hover) {
-        display: none;
-      }
-      position: relative;
-      top: 0.6em;
-      font-size: x-large;
-      height: 2.5em;
-      margin-right: 1em;
-      padding: 0.2em 0 0 0.5em;
-      > a {
-        color: $c-font-page;
-        text-shadow: $text-shadow;
-        float: right;
-        padding-left: 0.5em;
+        &__toggle {
+          display: none;
+        }
+        &__text {
+          display: none;
+        }
       }
 
-      .dropdown-window {
-        visibility: hidden;
-        background: $c-bg-header-dropdown;
-        box-shadow: 2px 5px 6px rgba(0, 0, 0, 0.3);
-        position: absolute;
-        top: 1.6em;
-        right: 0;
-        a {
-          width: 10em;
-          font-size: small;
-          display: block;
-          padding: 0.4rem 0.5rem;
-          vertical-align: middle;
-          color: $c-header-dropdown;
-          &:hover {
-            background: $c-primary;
-            &,
-            &::after {
-              color: $c-primary-over;
+      @media not all and (hover: hover) {
+        &__text {
+          padding-left: 0.4em;
+        }
+        .btn-rack {
+          &__btn {
+            text-wrap: wrap;
+            text-align: left;
+          }
+        }
+        position: relative;
+        top: 0.6em;
+        font-size: 2em;
+        height: 2.5em;
+        margin-right: 1em;
+        padding: 0.2em 0 0 0.5em;
+        &__toggle {
+          color: $c-font-page;
+          text-shadow: $text-shadow;
+          float: right;
+          padding: 0 0.5em;
+        }
+        .dropdown-window {
+          visibility: hidden;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          background: $c-bg-header-dropdown;
+          box-shadow: 2px 5px 6px rgba(0, 0, 0, 0.3);
+          position: absolute;
+          top: 1.6em;
+          right: 0;
+          a {
+            width: 10em;
+            font-size: small;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            color: $c-header-dropdown;
+            &:hover {
+              background: $c-primary;
+              &,
+              &::after {
+                color: $c-primary-over;
+              }
             }
           }
         }
