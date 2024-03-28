@@ -201,6 +201,7 @@ export default class AnalyseCtrl {
   }
 
   initialize(data: AnalyseData, merge: boolean): void {
+    console.log(data);
     this.data = data;
     this.synthetic = data.game.id === 'synthetic';
     this.ongoing = !this.synthetic && game.playable(data);
@@ -539,6 +540,7 @@ export default class AnalyseCtrl {
 
   addNode(node: Tree.Node, path: Tree.Path) {
     this.persistence?.onAddNode(node, path);
+
     const newPath = this.tree.addNode(node, path);
     if (!newPath) {
       console.log("Can't addNode", node, path);
@@ -629,6 +631,8 @@ export default class AnalyseCtrl {
         if (node.ceval.cloud && this.ceval.isDeeper()) node.ceval = ev;
       }
 
+
+
       if (path === this.path) {
         this.setAutoShapes();
         if (!isThreat) {
@@ -658,6 +662,8 @@ export default class AnalyseCtrl {
           ...engine,
           endpoint: this.opts.externalEngineEndpoint,
         })) || [],
+
+
       onSelectEngine: () => {
         this.configureCeval();
         this.redraw();
@@ -814,6 +820,7 @@ export default class AnalyseCtrl {
     if (this.study && this.study.data.chapter.id !== data.ch) return;
     this.tree.merge(data.tree);
     this.data.analysis = data.analysis;
+
     if (data.analysis)
       data.analysis.partial = !!treeOps.findInMainline(data.tree, this.partialAnalysisCallback);
     if (data.division) this.data.game.division = data.division;

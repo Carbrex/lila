@@ -134,6 +134,7 @@ export function make(send: AnalyseSocketSend, ctrl: AnalyseCtrl): Socket {
     node(data: { ch?: string; node: Tree.Node; path: string }) {
       clearTimeout(anaMoveTimeout);
       // no strict equality here!
+      
       if (data.ch == currentChapterId()) ctrl.addNode(data.node, data.path);
       else console.log('socket handler node got wrong chapter id', data);
     },
@@ -205,6 +206,8 @@ export function make(send: AnalyseSocketSend, ctrl: AnalyseCtrl): Socket {
     receive(type, data) {
       const handler = (handlers as SocketHandlers)[type];
       if (handler) {
+        console.log(data);
+
         handler(data);
         return true;
       }

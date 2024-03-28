@@ -53,7 +53,7 @@ export default function (root: AnalyseCtrl, goal: Goal, nbMoves: number): boolea
       if (nbMoves > goal.moves!) return false;
       const mateIn = myMateIn(node, root.bottomColor());
       if (mateIn === null) return null;
-      if (!mateIn || (mateIn as number) + nbMoves > goal.moves!) return false;
+      if (!mateIn || (mateIn as number) + nbMoves > goal.moves!) return false;// This 
       break;
     }
     case 'promotion':

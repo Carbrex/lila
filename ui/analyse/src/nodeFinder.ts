@@ -11,6 +11,8 @@ export function nextGlyphSymbol(
   fromPly: number,
 ): Tree.Node | undefined {
   const len = mainline.length;
+  
+  console.log(mainline,mainline.length)
   if (!len) return;
   const fromIndex = fromPly - mainline[0].ply;
   for (let i = 1; i < len; i++) {
@@ -38,6 +40,7 @@ export function evalSwings(mainline: Tree.Node[], nodeFilter: (node: Tree.Node) 
         hasCompChild(prev) &&
         (diff > threshold || (prev.eval.mate && !node.eval.mate && Math.abs(prev.eval.mate) <= 3))
       ) {
+        console.log(i,i-1);
         found.push(node);
       }
     }

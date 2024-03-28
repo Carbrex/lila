@@ -41,6 +41,8 @@ function playerTable(ctrl: AnalyseCtrl, color: Color): VNode {
   const d = ctrl.data,
     sideData = d.analysis![color];
 
+  
+
   return h('div.advice-summary__side', [
     h('div.advice-summary__player', [h(`i.is.color-icon.${color}`), renderPlayer(ctrl, color)]),
     ...advices.map(a => error(ctrl, d.analysis![color][a.kind], color, a)),
