@@ -43,6 +43,9 @@ export default class ChatCtrl {
       loaded: false,
       enabled: prop(!!this.data.palantir),
     };
+    console.log('site-study', site.analysis.study);
+    console.log('site-burl', site.analysis.study.baseUrl());
+    console.log('site-pos', site.analysis.study.position());
     this.trans = site.trans(this.opts.i18n);
     const noChat = site.storage.get('nochat');
     this.vm = {
@@ -97,11 +100,36 @@ export default class ChatCtrl {
   post = (text: string): boolean => {
     text = text.trim();
     if (!text) return false;
+    if (text.startsWith('<<<<')) return false;
     if (text == 'You too!' && !this.data.lines.some(l => l.u != this.data.userId)) return false;
     if (text.length > 140) {
       alert('Max length: 140 chars. ' + text.length + ' chars used.');
       return false;
     }
+
+    if (site.analysis) {
+      // let roundId = 'static-round-id';
+      let roundId = site.analysis.study.relay.currentRound().id;
+      let roundSlug = site.analysis.study.relay.currentRound().slug;
+      // let gameId = 'static-game-id';
+      let gameId = site.analysis.study.currentChapter().id;
+      let moveNo = site.analysis.study.currentNode().ply;
+      // roundId = site.analysis.study.roundId();
+      // gameId = site.analysis.study.gameId();
+      // moveNo = site.analysis.study.moveNo();
+      console.log('site-study', site.analysis.study);
+      console.log('site-relay-tourShow', site.analysis.study.relay);
+      console.log('site-relay-tourShow', site.analysis.study.relay.tourShow);
+      console.log('site-round', site.analysis.study.relay.currentRound().id);
+      console.log('site-round', site.analysis.study.relay.currentRound().slug);
+      console.log('site-pos', site.analysis.study.position());
+      console.log('site-game', site.analysis.study.currentChapter().id);
+      console.log('site-shr-node', site.analysis.study.currentNode());
+      console.log('site-shr-node', site.analysis.study.currentNode().ply);
+      text = '<<<<' + roundSlug + '|' + roundId + '|' + gameId + '|' + moveNo + '>>>> ' + text;
+    }
+
+    console.log('chat post', text);
     site.pubsub.emit('socket.send', 'talk', text);
     return true;
   };
@@ -131,6 +159,9 @@ export default class ChatCtrl {
   onMessage = (line: Line) => {
     this.data.lines.push(line);
     const nb = this.data.lines.length;
+    console.log('chat message', line);
+    console.log('chat lines', nb);
+    console.log(this.data);
     if (nb > this.maxLines) {
       this.data.lines.splice(0, nb - this.maxLines + this.maxLinesDrop);
       this.vm.domVersion++;

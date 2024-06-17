@@ -30,6 +30,7 @@ export default function (ctrl: ChatCtrl): Array<VNode | undefined> {
         attrs: { role: 'log', 'aria-live': 'polite', 'aria-atomic': 'false' },
         hook: {
           insert(vnode) {
+            // console.log('vnode', vnode);
             const $el = $(vnode.elm as HTMLElement).on('click', 'a.jump', (e: Event) => {
               site.pubsub.emit('jump', (e.target as HTMLElement).getAttribute('data-ply'));
             });
@@ -188,6 +189,24 @@ const userThunk = (name: string, title?: string, patron?: boolean, flair?: Flair
   userLink({ name, title, patron, line: !!patron, flair });
 
 function renderLine(ctrl: ChatCtrl, line: Line): VNode {
+  if (line.t.startsWith('<<<<')) {
+    // line.t looks like '<<<<roundSlug|roundId|gameId|moveNo>>>> text'
+    //text = '<<<<' + roundSlug+'|' roundId + '|' + gameId + '|' + moveNo + '>>>> ' + text;
+    const parts = line.t.match(/^<<<<([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)>>>>\s(.+)$/);
+    if (parts) {
+      const [_, roundSlug, roundId, gameId, moveNo, text] = parts;
+      // console.log('_',_);
+      const broadcastSlug= site.analysis.study.relayData.tour.slug;
+      const broadcastURL = `/broadcast/${broadcastSlug}/${roundSlug}/${roundId}/${gameId}#${moveNo}`;
+      // const ply = `${roundId}/${gameId}/${moveNo}`;
+      // console.log('ply', ply);
+      line.t = text;
+      line.ply = broadcastURL;
+      console.log('line', broadcastURL);
+    }
+  }
+
+  // console.log('line', line);
   const textNode = renderText(line.t, ctrl.opts.enhance);
 
   if (line.u === 'lichess') return h('li.system', textNode);
@@ -204,6 +223,8 @@ function renderLine(ctrl: ChatCtrl, line: Line): VNode {
       .match(enhance.userPattern)
       ?.find(mention => mention.trim().toLowerCase() == `@${ctrl.data.userId}`);
 
+  const plyy = line.ply ? h('a', { attrs: { 'href': line.ply } }, ' -->') : null;
+  // console.log('plyy', plyy);
   return h(
     'li',
     {
@@ -214,7 +235,8 @@ function renderLine(ctrl: ChatCtrl, line: Line): VNode {
       },
     },
     ctrl.moderation
-      ? [line.u ? modLineAction() : null, userNode, ' ', textNode]
+      ? [line.u ? modLineAction() : null, userNode, ' ', textNode,
+        plyy]
       : [
           myUserId && line.u && myUserId != line.u
             ? h('action.flag', {
@@ -224,6 +246,7 @@ function renderLine(ctrl: ChatCtrl, line: Line): VNode {
           userNode,
           ' ',
           textNode,
+          plyy
         ],
   );
 }
