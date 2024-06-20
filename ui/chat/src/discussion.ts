@@ -3,6 +3,7 @@ import * as enhance from 'common/richText';
 import { userLink } from 'common/userLink';
 import * as spam from './spam';
 import { Line } from './interfaces';
+import { bind } from 'common/snabbdom';
 import { h, thunk, VNode, VNodeData } from 'snabbdom';
 import { lineAction as modLineAction, report } from './moderation';
 import { presetView } from './preset';
@@ -189,20 +190,26 @@ const userThunk = (name: string, title?: string, patron?: boolean, flair?: Flair
   userLink({ name, title, patron, line: !!patron, flair });
 
 function renderLine(ctrl: ChatCtrl, line: Line): VNode {
-  if (line.t.startsWith('<<<<')) {
+  let chapterId_: string | null = null;
+  let ply_: number | null = null;
+  if (line.t.startsWith('<<<<')&&site.analysis?.study?.relay) {
     // line.t looks like '<<<<roundSlug|roundId|gameId|moveNo>>>> text'
-    //text = '<<<<' + roundSlug+'|' roundId + '|' + gameId + '|' + moveNo + '>>>> ' + text;
-    const parts = line.t.match(/^<<<<([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)>>>>\s(.+)$/);
+    //text = '<<<<' + gameId + '|' + moveNo + '>>>> ' + text;
+    // const parts = line.t.match(/^<<<<([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)>>>>\s(.+)$/);
+    const parts = line.t.match(/^<<<<([^|]+)\|([^|]+)>>>>\s(.+)$/);
     if (parts) {
-      const [_, roundSlug, roundId, gameId, moveNo, text] = parts;
+      const [_, chapterId, ply, text] = parts;
       // console.log('_',_);
-      const broadcastSlug= site.analysis.study.relayData.tour.slug;
-      const broadcastURL = `/broadcast/${broadcastSlug}/${roundSlug}/${roundId}/${gameId}#${moveNo}`;
-      // const ply = `${roundId}/${gameId}/${moveNo}`;
+      // const broadcastSlug = site.analysis.study.relayData.tour.slug;
+      // const broadcastURL = `/broadcast/${broadcastSlug}/${roundSlug}/${roundId}/${chapterId}#${ply}`;
+      chapterId_ = chapterId;
+      ply_ = parseInt(ply);
+      // const ply = `${roundId}/${chapterId}/${ply}`;
       // console.log('ply', ply);
+      // site.analysis.study.setChapter(chapterId);
       line.t = text;
-      line.ply = broadcastURL;
-      console.log('line', broadcastURL);
+      line.hasPly = true;
+      // console.log('line', broadcastURL);
     }
   }
 
@@ -223,8 +230,19 @@ function renderLine(ctrl: ChatCtrl, line: Line): VNode {
       .match(enhance.userPattern)
       ?.find(mention => mention.trim().toLowerCase() == `@${ctrl.data.userId}`);
 
-  const plyy = line.ply ? h('a', { attrs: { 'href': line.ply } }, ' -->') : null;
-  // console.log('plyy', plyy);
+  const plyy = line.hasPly&&site.analysis?.study?.relay
+    ? h(
+        'button',
+        {
+          hook: bind('click', () => {
+            site.analysis.study.setChapter(chapterId_);
+            site.analysis.jumpToMain(ply_);
+          }),
+          attrs: { title: `Jump to move ${chapterId_}#${ply_}`},
+        },
+        ' -->',
+      )
+    : null;
   return h(
     'li',
     {
@@ -235,8 +253,7 @@ function renderLine(ctrl: ChatCtrl, line: Line): VNode {
       },
     },
     ctrl.moderation
-      ? [line.u ? modLineAction() : null, userNode, ' ', textNode,
-        plyy]
+      ? [line.u ? modLineAction() : null, userNode, ' ', textNode, plyy]
       : [
           myUserId && line.u && myUserId != line.u
             ? h('action.flag', {
@@ -246,7 +263,7 @@ function renderLine(ctrl: ChatCtrl, line: Line): VNode {
           userNode,
           ' ',
           textNode,
-          plyy
+          plyy,
         ],
   );
 }

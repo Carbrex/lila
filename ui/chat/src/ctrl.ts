@@ -43,9 +43,6 @@ export default class ChatCtrl {
       loaded: false,
       enabled: prop(!!this.data.palantir),
     };
-    console.log('site-study', site.analysis.study);
-    console.log('site-burl', site.analysis.study.baseUrl());
-    console.log('site-pos', site.analysis.study.position());
     this.trans = site.trans(this.opts.i18n);
     const noChat = site.storage.get('nochat');
     this.vm = {
@@ -107,13 +104,13 @@ export default class ChatCtrl {
       return false;
     }
 
-    if (site.analysis) {
+    if (site.analysis?.study?.relay&&!site.analysis.study.relay.tourShow()) {
       // let roundId = 'static-round-id';
-      let roundId = site.analysis.study.relay.currentRound().id;
-      let roundSlug = site.analysis.study.relay.currentRound().slug;
+      // let roundId = site.analysis.study.relay.currentRound().id;
+      // let roundSlug = site.analysis.study.relay.currentRound().slug;
       // let gameId = 'static-game-id';
-      let gameId = site.analysis.study.currentChapter().id;
-      let moveNo = site.analysis.study.currentNode().ply;
+      let chapterId = site.analysis.study.currentChapter().id;
+      let ply = site.analysis.study.currentNode().ply;
       // roundId = site.analysis.study.roundId();
       // gameId = site.analysis.study.gameId();
       // moveNo = site.analysis.study.moveNo();
@@ -126,7 +123,7 @@ export default class ChatCtrl {
       console.log('site-game', site.analysis.study.currentChapter().id);
       console.log('site-shr-node', site.analysis.study.currentNode());
       console.log('site-shr-node', site.analysis.study.currentNode().ply);
-      text = '<<<<' + roundSlug + '|' + roundId + '|' + gameId + '|' + moveNo + '>>>> ' + text;
+      text = '<<<<' + chapterId + '|' + ply + '>>>> ' + text;
     }
 
     console.log('chat post', text);

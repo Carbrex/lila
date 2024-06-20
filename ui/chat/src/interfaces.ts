@@ -52,7 +52,7 @@ export interface Line {
   p?: boolean; // patron
   f?: Flair;
   title?: string;
-  ply?: any;
+  hasPly?: boolean;
 }
 
 export interface Permissions {
