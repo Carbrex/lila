@@ -190,8 +190,6 @@ const userThunk = (name: string, title?: string, patron?: boolean, flair?: Flair
   userLink({ name, title, patron, line: !!patron, flair });
 
 function renderLine(ctrl: ChatCtrl, line: Line): VNode {
-  let chapterId_: string | null = null;
-  let ply_: number | null = null;
   if (line.t.startsWith('<<<<')&&site.analysis?.study?.relay) {
     // line.t looks like '<<<<roundSlug|roundId|gameId|moveNo>>>> text'
     //text = '<<<<' + gameId + '|' + moveNo + '>>>> ' + text;
@@ -202,13 +200,12 @@ function renderLine(ctrl: ChatCtrl, line: Line): VNode {
       // console.log('_',_);
       // const broadcastSlug = site.analysis.study.relayData.tour.slug;
       // const broadcastURL = `/broadcast/${broadcastSlug}/${roundSlug}/${roundId}/${chapterId}#${ply}`;
-      chapterId_ = chapterId;
-      ply_ = parseInt(ply);
       // const ply = `${roundId}/${chapterId}/${ply}`;
       // console.log('ply', ply);
       // site.analysis.study.setChapter(chapterId);
       line.t = text;
-      line.hasPly = true;
+      line.chapterId = chapterId;
+      line.ply=parseInt(ply);
       // console.log('line', broadcastURL);
     }
   }
@@ -230,15 +227,15 @@ function renderLine(ctrl: ChatCtrl, line: Line): VNode {
       .match(enhance.userPattern)
       ?.find(mention => mention.trim().toLowerCase() == `@${ctrl.data.userId}`);
 
-  const plyy = line.hasPly&&site.analysis?.study?.relay
+  const plyy = site.analysis?.study?.relay&&line.chapterId!==undefined&&line.ply!==undefined
     ? h(
         'button',
         {
           hook: bind('click', () => {
-            site.analysis.study.setChapter(chapterId_);
-            site.analysis.jumpToMain(ply_);
+            site.analysis.study.setChapter(line.chapterId);
+            site.analysis.jumpToMain(line.ply);
           }),
-          attrs: { title: `Jump to move ${chapterId_}#${ply_}`},
+          attrs: { title: `Jump to move ${line.chapterId}#${line.ply}`},
         },
         ' -->',
       )

@@ -52,7 +52,8 @@ export interface Line {
   p?: boolean; // patron
   f?: Flair;
   title?: string;
-  hasPly?: boolean;
+  chapterId?: string;
+  ply?: number;
 }
 
 export interface Permissions {
