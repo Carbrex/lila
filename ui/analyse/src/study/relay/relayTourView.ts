@@ -269,6 +269,7 @@ const makeTabs = (ctrl: AnalyseCtrl) => {
   const study = ctrl.study,
     relay = study?.relay;
   if (!relay) return undefined;
+  // console.log("relay",relay);
 
   const makeTab = (key: RelayTab, name: string) =>
     h(

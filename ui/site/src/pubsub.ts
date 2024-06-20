@@ -8,6 +8,8 @@ const pubsub: Pubsub = {
     subs[name]?.delete(cb);
   },
   emit(name: string, ...args: any[]) {
+    if(name!=='socket.lag')
+      console.log('pubsub emit', name, args);
     for (const fn of subs[name] || []) fn.apply(null, args);
   },
 };

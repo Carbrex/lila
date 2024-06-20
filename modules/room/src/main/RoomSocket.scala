@@ -18,7 +18,7 @@ object RoomSocket:
   type RoomsMap = SyncActorMap[RoomId, RoomState]
 
   case class NotifyVersion[A: Writes](tpe: String, data: A, troll: Boolean = false):
-    def msg = makeMessage(tpe, data)
+    def msg = makeMessage(tpe.pp, data.pp).pp
 
   final class RoomState(roomId: RoomId, send: SocketSend)(using Executor) extends SyncActor:
 
@@ -58,7 +58,7 @@ object RoomSocket:
         chat.write(
           roomId.into(ChatId),
           userId,
-          msg,
+          msg,// .pp
           publicSource(roomId)(PublicSource),
           chatBusChan
         )
@@ -94,8 +94,8 @@ object RoomSocket:
 
   def subscribeChat(rooms: RoomsMap, busChan: BusChan.Select)(using FlairGet, Executor) =
     lila.common.Bus.subscribeFun(busChan(BusChan).chan, BusChan.global.chan):
-      case lila.core.chat.ChatLine(id, line, json) if line.userIdMaybe.isDefined =>
-        rooms.tellIfPresent(id.into(RoomId), (NotifyVersion)("message", json, line.troll))
+      case lila.core.chat.ChatLine(id, line, json) if line.pp.userIdMaybe.isDefined =>
+        rooms.tellIfPresent(id.pp.into(RoomId), (NotifyVersion)("message", json.pp, line.troll)).pp
       case lila.core.chat.OnTimeout(id, userId) =>
         rooms.tellIfPresent(id.into(RoomId), NotifyVersion("chat_timeout", userId, troll = false))
       case lila.core.chat.OnReinstate(id, userId) =>

@@ -30,7 +30,7 @@ object JsonView:
           userId <- line.userIdMaybe
           flair  <- flair
         yield Map(userId -> flair))
-        lineWriter.writes(line)
+        lineWriter.writes(line.pp)
 
   def userModInfo(using LightUser.GetterSync)(u: UserModInfo) =
     modView(u.user) ++ Json.obj("history" -> u.history)
@@ -70,7 +70,7 @@ object JsonView:
       case l: PlayerLine => playerLineWriter.writes(l)
 
     def userLineWriter(using getFlair: FlairMap): OWrites[UserLine] = OWrites: l =>
-      Json
+      Json//.pp
         .obj(
           "u" -> l.username,
           "t" -> l.text

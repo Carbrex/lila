@@ -494,13 +494,14 @@ export default class StudyCtrl {
     this.likeToggler();
   };
   position = () => this.data.position;
-  canJumpTo = (path: Tree.Path) =>
-    this.gamebookPlay
+  canJumpTo = (path: Tree.Path) =>{
+    console.log('path',path)
+    return this.gamebookPlay
       ? this.gamebookPlay.canJumpTo(path)
       : this.data.chapter.conceal === undefined ||
         this.isChapterOwner() ||
         treePath.contains(this.ctrl.path, path) || // can always go back
-        this.ctrl.tree.lastMainlineNode(path).ply <= this.data.chapter.conceal;
+        this.ctrl.tree.lastMainlineNode(path).ply <= this.data.chapter.conceal;}
   onJump = () => {
     if (this.gamebookPlay) this.gamebookPlay.onJump();
     else this.chapters.localPaths[this.vm.chapterId] = this.ctrl.path; // don't remember position on gamebook
@@ -509,6 +510,7 @@ export default class StudyCtrl {
   onFlip = () => this.chapterFlipMapProp(this.data.chapter.id, this.ctrl.flipped);
 
   setPath = (path: Tree.Path, node: Tree.Node) => {
+    console.log('setPath',path)
     this.onSetPath(path);
     this.commentForm.onSetPath(this.vm.chapterId, path, node);
   };
@@ -667,6 +669,7 @@ export default class StudyCtrl {
     },
     reload: this.xhrReload,
     changeChapter: d => {
+      console.log(d)
       this.setMemberActive(d.w);
       if (!this.vm.mode.sticky) this.vm.behind++;
       this.data.position = d.p;

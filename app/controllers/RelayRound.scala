@@ -163,7 +163,7 @@ final class RelayRound(
       f: RoundModel.WithTour => Fu[Result]
   )(using ctx: Context): Fu[Result] =
     Found(env.relay.api.byIdWithTour(id)): rt =>
-      if !ctx.req.path.startsWith(rt.path) && HTTPRequest.isRedirectable(ctx.req)
+      if !ctx.req.path.startsWith(rt.path.pp) && HTTPRequest.isRedirectable(ctx.req)
       then Redirect(rt.path)
       else f(rt)
 

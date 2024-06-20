@@ -302,8 +302,8 @@ final class ChatApi(
     Bus.publish(msg, Chat.chanOf(chatId))
 
   private def publishLine(chatId: ChatId, line: Line, busChan: BusChan.Select): Funit =
-    JsonView(line).map: json =>
-      publish(chatId, ChatLine(chatId, line, json), busChan)
+    JsonView(line).map: json =>//line.pp
+      publish(chatId, ChatLine(chatId, line, json.pp), busChan)
 
   def remove(chatId: ChatId) = coll.delete.one($id(chatId)).void
 

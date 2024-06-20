@@ -543,4 +543,4 @@ function jumpLine(ctrl: AnalyseController, delta: number) {
   const prevNode = ctrl.tree.nodeAtPath(prevPath);
   const newPath = prevPath + prevNode.children[newI].id;
   ctrl.userJumpIfCan(newPath);
-}
+}//
