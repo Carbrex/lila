@@ -37,7 +37,7 @@ export default class ChatCtrl {
     readonly opts: ChatOpts,
     readonly redraw: Redraw,
   ) {
-    console.log(opts);
+    // console.log(opts);
     this.data = opts.data;
     this.broadcastChatHandler = opts.broadcastChatHandler;
     if (opts.noteId) this.allTabs.push('note');
@@ -100,23 +100,17 @@ export default class ChatCtrl {
 
   post = (text: string): boolean => {
     text = text.trim();
-    console.log(text);
+    // console.log(text);
     if (!text) return false;
     if (text == 'You too!' && !this.data.lines.some(l => l.u != this.data.userId)) return false;
-    if (text.length > 140) {
-      alert('Max length: 140 chars. ' + text.length + ' chars used.');
+    if (text.length > 125) {
+      alert('Max length: 125 chars. ' + text.length + ' chars used.');
       return false;
     }
     if (text.includes('\ue666')) return false;
 
-    // if (site.analysis?.study?.relay && !site.analysis.study.relay.tourShow()) {
-    //   let chapterId = site.analysis.study.currentChapter().id;
-    //   let ply = site.analysis.study.currentNode().ply;
-    //   // '\ue666' was arbitrarily chosen from the unicode private use area to separate the text from the chapterId and ply
-    //   text = text + '\ue666' + chapterId + '\ue666' + ply;
-    // }
     if (this.broadcastChatHandler) text = this.broadcastChatHandler.encode(text);
-    console.log(text);
+    // console.log(text);
 
     site.pubsub.emit('socket.send', 'talk', text);
     return true;
