@@ -189,17 +189,17 @@ const userThunk = (name: string, title?: string, patron?: boolean, flair?: Flair
   userLink({ name, title, patron, line: !!patron, flair });
 
 function renderLine(ctrl: ChatCtrl, line: Line): VNode {
-  if (line.t.startsWith('<<<<') && site.analysis?.study?.relay) {
-    const parts = line.t.match(/^<<<<([^|]+)\|([^|]+)>>>>\s(.+)$/);
-    if (parts) {
-      const [_, chapterId, ply, text] = parts;
-      line.t = text;
-      line.chapterId = chapterId;
-      line.ply = parseInt(ply);
-    }
-  }
-
-  const textNode = renderText(line.t, ctrl.opts.enhance);
+  // if (line.t.includes('\ue666') && site.analysis?.study?.relay) {
+  //   let segs = line.t.split('\ue666');
+  //   if (segs.length == 3) {
+  //     const [text, chapterId, ply] = segs;
+  //     line.t = text;
+  //     line.chapterId = chapterId;
+  //     line.ply = parseInt(ply);
+  //     console.log(line);
+  //   }
+  // }
+  const textNode = renderText(ctrl.broadcastChatHandler?.getClearedText(line.t) || line.t, ctrl.opts.enhance);
 
   if (line.u === 'lichess') return h('li.system', textNode);
 
@@ -215,20 +215,19 @@ function renderLine(ctrl: ChatCtrl, line: Line): VNode {
       .match(enhance.userPattern)
       ?.find(mention => mention.trim().toLowerCase() == `@${ctrl.data.userId}`);
 
-  const plyy =
-    site.analysis?.study?.relay && line.chapterId !== undefined && line.ply !== undefined
-      ? h(
-          'button',
-          {
-            hook: bind('click', () => {
-              site.analysis.study.setChapter(line.chapterId);
-              site.analysis.jumpToMain(line.ply);
-            }),
-            attrs: { title: `Jump to move ${line.chapterId}#${line.ply}` },
+  console.log(ctrl.broadcastChatHandler.canJumpToMove(line.t),line.t);
+  const plyy = ctrl.broadcastChatHandler?.canJumpToMove(line.t)
+    ? h(
+        'a.jump',
+        {
+          hook: bind('click', ctrl.broadcastChatHandler.jumpToMove.bind(null, line.t)),
+          attrs: {
+            title: `Jump to move ${line.chapterId}#${line.ply}`,
           },
-          ' -->',
-        )
-      : null;
+        },
+        '#',
+      )
+    : null;
   return h(
     'li',
     {
